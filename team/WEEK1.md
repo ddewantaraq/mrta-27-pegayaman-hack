@@ -10,14 +10,14 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 ## Checklist (task IDs)
 
-- [ ] **T01** — B: Python env + requirements
-- [ ] **T02** — B: Data completeness checklist → RESULTS
-- [ ] **T03** — B: Google account for submission form
-- [ ] **T04** — E2: Confirm `data/` gitignored
-- [ ] **T10** — B: Score shipped baselines → RESULTS
-- [ ] **T11** — E2: Regenerate baselines with `starter/baseline.py`
-- [ ] **T12** — B: Possession rules plain language → TECH_DOC_DRAFT
-- [ ] **T13** / **T13r** — B write + E1 review: spellF1 vs macroF1
+- [x] **T01** — B: Python env + requirements
+- [x] **T02** — B: Data completeness checklist → RESULTS
+- [x] **T03** — B: Google account for submission form
+- [x] **T04** — E2: Confirm `data/` gitignored
+- [x] **T10** — B: Score shipped baselines → RESULTS
+- [x] **T11** — E2: Regenerate baselines with `starter/baseline.py`
+- [x] **T12** — B: Possession rules plain language → TECH_DOC_DRAFT
+- [x] **T13** / **T13r** — B write + E1 review: spellF1 vs macroF1
 
 Optional parallel (if E1 has spare time): peek at ATD loader / baseline code for Week 2 — do **not** block Week 1 exit on **T20**.
 

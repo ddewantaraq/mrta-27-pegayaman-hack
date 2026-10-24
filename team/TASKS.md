@@ -11,10 +11,10 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T01 | Confirm Python env + `pip install -r requirements.txt` | B | 1 | todo | Oct 22 | `python -c "import numpy,pandas"` works; note Python version in RESULTS | — |
-| T02 | Confirm non-mp4 data complete vs `data/README.md` | B | 1 | todo | Oct 22 | Checklist logged in RESULTS (tactical ATD/xml/homo/tags + broadcast ATD/xml/homo present; mp4 optional) | — |
-| T03 | Google account ready for submission form | B | 1 | todo | Oct 26 | Team member who will upload can sign in to Google Forms | — |
-| T04 | Ensure `data/` never committed (gitignore check) | E2 | 1 | todo | Oct 22 | `git check-ignore -v data/tactical/` (or equivalent) shows ignore; no data paths staged | — |
+| T01 | Confirm Python env + `pip install -r requirements.txt` | B | 1 | done | Oct 22 | `python -c "import numpy,pandas"` works; note Python version in RESULTS | — |
+| T02 | Confirm non-mp4 data complete vs `data/README.md` | B | 1 | done | Oct 22 | Checklist logged in RESULTS (tactical ATD/xml/homo/tags + broadcast ATD/xml/homo present; mp4 optional) | — |
+| T03 | Google account ready for submission form | B | 1 | done | Oct 26 | Team member who will upload can sign in to Google Forms | — |
+| T04 | Ensure `data/` never committed (gitignore check) | E2 | 1 | done | Oct 22 | `git check-ignore -v data/tactical/` (or equivalent) shows ignore; no data paths staged | — |
 
 ---
 
@@ -22,11 +22,11 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T10 | Run `python evaluation/run_evaluation.py` on shipped baselines; paste board into RESULTS | B | 1 | todo | Oct 23 | Four baseline rows in [RESULTS.md](RESULTS.md) with macroF1 / spellF1 | T01 |
-| T11 | Run `python starter/baseline.py`; confirm four CSVs regenerate | E2 | 1 | todo | Oct 24 | Command finishes; `baseline_*.csv` present under `evaluation/results/` | T02, T04 |
-| T12 | Plain-language possession rules summary → TECH_DOC_DRAFT | B | 1 | todo | Oct 26 | Section 3 in [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) filled from `CHALLENGE.md` (no jargon dump) | — |
-| T13 | Document spellF1 vs macroF1 for the team | B | 1 | todo | Oct 26 | Short section in TECH_DOC_DRAFT (or TEAM metrics already OK + E1 reviewed) | T10 |
-| T13r | E1 reviews T13 accuracy | E1 | 1 | todo | Oct 26 | E1 signs off in RESULTS notes or task Status done | T13 |
+| T10 | Run `python evaluation/run_evaluation.py` on shipped baselines; paste board into RESULTS | B | 1 | done | Oct 23 | Four baseline rows in [RESULTS.md](RESULTS.md) with macroF1 / spellF1 | T01 |
+| T11 | Run `python starter/baseline.py`; confirm four CSVs regenerate | E2 | 1 | done | Oct 24 | Command finishes; `baseline_*.csv` present under `evaluation/results/` | T02, T04 |
+| T12 | Plain-language possession rules summary → TECH_DOC_DRAFT | B | 1 | done | Oct 26 | Section 3 in [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) filled from `CHALLENGE.md` (no jargon dump) | — |
+| T13 | Document spellF1 vs macroF1 for the team | B | 1 | done | Oct 26 | Short section in TECH_DOC_DRAFT (or TEAM metrics already OK + E1 reviewed) | T10 |
+| T13r | E1 reviews T13 accuracy | E1 | 1 | done | Oct 26 | E1 signs off in RESULTS notes or task Status done | T13 |
 
 ---
 
