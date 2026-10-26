@@ -62,7 +62,7 @@ Plain language first; then how the code approximates it.
 - **What does not count as a change:** A simple touch without control; a deflection that does not intercept; winning an aerial duel without that team then controlling the ball.
 - **Possession as an interval:** A possession is a maximal run of one team with the ball alive. `H H H A A` is two possessions. `H H D D H H` is two possessions with a stoppage between them, not one. Dead ball is never a possession.
 - **Reference:** If our reading of these rules disagrees with the public 5-minute ground truth, the ground truth is right.
-- **How our state machine / thresholds implement the above:** TBD until Week 2 code (T20–T21). For now the shipped baseline is “nearest tracked player to the ball + temporal majority vote,” which does **not** yet encode controlled possession or proper dead-ball logic.
+- **How our state machine / thresholds implement the above (T20–T21, `sm_v1`):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A` (never auto-`D`); (3) switch team only after ~15 frames of opposing nearest within ~3 m (control hysteresis); (4) contested/far → keep last team; (5) basic dead-ball = ball **visible** outside a normalized pitch margin; (6) merge sub-~0.3 s H/A islands. Run: `python starter/predict_v1.py`. Smart Tagging not used yet (T23).
 
 ---
 
@@ -70,10 +70,10 @@ Plain language first; then how the code approximates it.
 
 _Owner: E1_
 
-- Ball missing (~41% graded): what we do (hold / X / …): …
-- Track identity noise / no player IDs: …
-- Dead-ball detection vs “ball missing ≠ dead”: …
-- Smart Tagging as prior (not ground truth): …
+- Ball missing (~41% graded): what we do (hold / X / …): **Hold** last live team; `X` only if no live team established yet on graded frames.
+- Track identity noise / no player IDs: distances are team-collective (min home vs min away); no per-player identity.
+- Dead-ball detection vs “ball missing ≠ dead”: missing stays live-hold; `D` only from out-of-pitch (v1) — still under-calling stoppages vs GT.
+- Smart Tagging as prior (not ground truth): not wired yet (T23).
 
 ---
 
@@ -116,3 +116,4 @@ python evaluation/validate_submission.py path/to/<team_name>.csv
 |------|-----|--------|
 | 2026-10-20 | team | Initial stub created |
 | 2026-10-24 | B / E1 | T12 section 3 possession rules; T13/T13r section 0 metrics primer |
+| 2026-10-26 | E1 | T20/T21 sm_v1 implementation notes in §3–§4 |

@@ -10,8 +10,8 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 ## Checklist (task IDs)
 
-- [ ] **T20** — E1: Feature extract (ball present, nearest team, distances)
-- [ ] **T21** — E1: State machine v1 (hold, control hysteresis, basic dead-ball)
+- [x] **T20** — E1: Feature extract (ball present, nearest team, distances)
+- [x] **T21** — E1: State machine v1 (hold, control hysteresis, basic dead-ball)
 - [ ] **T22** — E2: One-command predict → valid 199319-row CSV
 - [ ] **T30** — B: Validate + score + log every new CSV (start ongoing habit)
 - [ ] **T31** — B (+ E1 interpret): poss / mean dur vs public GT (~17 / ~14.2 s)
