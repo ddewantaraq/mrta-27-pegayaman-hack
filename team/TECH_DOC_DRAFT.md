@@ -117,3 +117,4 @@ python evaluation/validate_submission.py path/to/<team_name>.csv
 | 2026-10-20 | team | Initial stub created |
 | 2026-10-24 | B / E1 | T12 section 3 possession rules; T13/T13r section 0 metrics primer |
 | 2026-10-26 | E1 | T20/T21 sm_v1 implementation notes in §3–§4 |
+| 2026-10-26 | E1 | Tweak v1.1: sm_v1_1 (longer control, edge dead-ball heuristics, keep last_live on D) |

@@ -1,7 +1,7 @@
-"""T21 wire-up: features -> state machine -> submission CSV.
+"""T21 wire-up: features -> state machine v1.1 -> submission CSV.
 
     .venv/bin/python starter/predict_v1.py
-    .venv/bin/python evaluation/validate_submission.py evaluation/results/sm_v1.csv
+    .venv/bin/python evaluation/validate_submission.py evaluation/results/sm_v1_1.csv
     .venv/bin/python evaluation/run_evaluation.py
 """
 
@@ -24,7 +24,10 @@ from state_machine import (  # noqa: E402
     DEFAULT_CONTROL_DIST_M,
     DEFAULT_CONTROL_FRAMES,
     DEFAULT_MIN_SPELL_FRAMES,
+    DEFAULT_MISSING_NEAR_EDGE_FRAMES,
     DEFAULT_OUT_MARGIN,
+    DEFAULT_STILL_NEAR_EDGE_FRAMES,
+    DEFAULT_STILL_SPEED_M,
     label_possession,
     params_dict,
 )
@@ -46,11 +49,16 @@ def write_submission(path, labels):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--game", default=GAME)
-    parser.add_argument("--out", default=os.path.join(RESULTS_DIR, "sm_v1.csv"))
+    parser.add_argument("--out", default=os.path.join(RESULTS_DIR, "sm_v1_1.csv"))
     parser.add_argument("--control-frames", type=int, default=DEFAULT_CONTROL_FRAMES)
     parser.add_argument("--control-dist-m", type=float, default=DEFAULT_CONTROL_DIST_M)
     parser.add_argument("--out-margin", type=float, default=DEFAULT_OUT_MARGIN)
     parser.add_argument("--min-spell-frames", type=int, default=DEFAULT_MIN_SPELL_FRAMES)
+    parser.add_argument("--missing-near-edge-frames", type=int,
+                        default=DEFAULT_MISSING_NEAR_EDGE_FRAMES)
+    parser.add_argument("--still-near-edge-frames", type=int,
+                        default=DEFAULT_STILL_NEAR_EDGE_FRAMES)
+    parser.add_argument("--still-speed-m", type=float, default=DEFAULT_STILL_SPEED_M)
     args = parser.parse_args()
 
     print("T20 extract_features ...")
@@ -62,8 +70,11 @@ def main():
         control_dist_m=args.control_dist_m,
         out_margin=args.out_margin,
         min_spell_frames=args.min_spell_frames,
+        missing_near_edge_frames=args.missing_near_edge_frames,
+        still_near_edge_frames=args.still_near_edge_frames,
+        still_speed_m=args.still_speed_m,
     )
-    print("T21 state_machine params: {}".format(params))
+    print("T21 state_machine v1.1 params: {}".format(params))
 
     labels = label_possession(
         features,
@@ -72,6 +83,9 @@ def main():
         control_dist_m=args.control_dist_m,
         out_margin=args.out_margin,
         min_spell_frames=args.min_spell_frames,
+        missing_near_edge_frames=args.missing_near_edge_frames,
+        still_near_edge_frames=args.still_near_edge_frames,
+        still_speed_m=args.still_speed_m,
     )
     path = write_submission(args.out, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}

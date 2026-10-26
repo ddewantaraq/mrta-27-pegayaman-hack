@@ -42,3 +42,9 @@ Week 2 is done when **all** are true:
 4. B has a copy-paste command from E2 to regenerate / score the latest file.
 
 When met, mark tasks `done` and start [WEEK3.md](WEEK3.md).
+
+---
+
+## Notes
+
+- **2026-10-26 — Tweak v1.1:** ran `predict_v1.py` → `evaluation/results/sm_v1_1.csv` (defaults: control_frames=25, min_spell_frames=12, missing/still near-edge dead-ball). See [RESULTS.md](RESULTS.md).
