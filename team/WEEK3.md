@@ -10,8 +10,8 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 ## Checklist (task IDs)
 
-- [ ] **T23** — E1: Smart Tagging soft priors (set pieces → D / restart; weak phase votes)
-- [ ] **T24** — E1: Tune on failure modes + poss-count sanity (**not** public spellF1 alone)
+- [x] **T23** — E1: Smart Tagging soft priors (set pieces → D / restart; weak phase votes)
+- [x] **T24** — E1: Tune on failure modes + poss-count sanity (**not** public spellF1 alone)
 - [ ] **T30** — B: Keep logging every CSV
 - [ ] **T31** — B: Keep poss/dur notes when metrics move
 - [ ] **T40** — E2: Public repo skeleton, pinned deps, README run steps (no `data/`)
@@ -43,3 +43,10 @@ Week 3 is done when **all** are true:
 4. Tuning notes exist in RESULTS explaining *why* a change was kept (not “public spellF1 went up”).
 
 When met, start [WEEK4.md](WEEK4.md).
+
+---
+
+## Notes
+
+- **2026-10-28 — T23:** Smart Tagging priors in `starter/smart_priors.py`; default on in `predict_v1.py` (`--no-smart-tagging` to disable). Output `sm_v1_3.csv`. See [RESULTS.md](RESULTS.md).
+- **2026-10-28 — T24:** Boundary diagnose on `sm_v1_4`; sandwich merge kept; asymmetric restart + no-phase dropped. Best public SM still `sm_v1_4`/`sm_v1_6` (spell 0.313).

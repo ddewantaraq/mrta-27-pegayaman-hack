@@ -37,8 +37,8 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 | T20 | Feature extract from tactical ATD (ball present, nearest team, distances) | E1 | 2 | done | Oct 30 | Module/script produces per-frame features for all 199319 frames; no match data pasted to cloud LLMs | T11 |
 | T21 | State machine v1: hold last team; control hysteresis; basic dead-ball | E1 | 2 | done | Nov 2 | Labels H/A/D/X; fewer possessions than `baseline_raw` on public window | T20 |
 | T22 | One-command predict script → valid 199319-row CSV | E2 | 2 | done | Nov 2 | Documented command writes CSV; `validate_submission.py` passes | T20 |
-| T23 | Smart Tagging soft priors (set pieces → D / restart; phases as weak votes) | E1 | 3 | todo | Nov 7 | Priors wired; do **not** copy phase intervals as labels; logged in RESULTS | T21, T22 |
-| T24 | Tune via failure modes + possession-count sanity (not public spellF1 alone) | E1 | 3 | todo | Nov 9 | Tuning notes in RESULTS; avoid ranking models only on public 5 min | T23 |
+| T23 | Smart Tagging soft priors (set pieces → D / restart; phases as weak votes) | E1 | 3 | done | Nov 7 | Priors wired; do **not** copy phase intervals as labels; logged in RESULTS | T21, T22 |
+| T24 | Tune via failure modes + possession-count sanity (not public spellF1 alone) | E1 | 3 | done | Nov 9 | Tuning notes in RESULTS; avoid ranking models only on public 5 min | T23 |
 
 ---
 

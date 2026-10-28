@@ -40,7 +40,7 @@ _Owner: E1 · B lists “dropped”_
 | Asset | Used? | How |
 |-------|-------|-----|
 | Tactical ATD | planned yes | Core input for possession (Week 2+) |
-| Smart Tagging | planned yes | Soft priors for dead ball / restarts (Week 3) |
+| Smart Tagging | yes | Soft priors: capped SET PIECES→D; weak phase votes (`sm_v1_4`) |
 | Tactical homography | planned optional | Debug / video gap-fill only |
 | Tactical video | planned optional | Debug only; not required for ATD path |
 | Broadcast (all) | planned no (v1) | Separate timeline; deferred until after freeze |
@@ -62,7 +62,7 @@ Plain language first; then how the code approximates it.
 - **What does not count as a change:** A simple touch without control; a deflection that does not intercept; winning an aerial duel without that team then controlling the ball.
 - **Possession as an interval:** A possession is a maximal run of one team with the ball alive. `H H H A A` is two possessions. `H H D D H H` is two possessions with a stoppage between them, not one. Dead ball is never a possession.
 - **Reference:** If our reading of these rules disagrees with the public 5-minute ground truth, the ground truth is right.
-- **How our state machine / thresholds implement the above (T20–T22, `sm_v1_1`):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A`, except a long gap after the ball was last seen near the edge; (3) switch team only after 25 frames (~1 s) of the other team being nearest and within 3 m; (4) contested/far → keep last team; (5) dead ball = ball outside the pitch, a still ball near the edge for 25 frames, or missing for 50 frames after a near-edge sighting; (6) merge H/A islands shorter than 12 frames (~0.5 s). One command: `predict_v1.bat` on Windows, or `bash predict_v1.sh` on Mac (writes the next auto `sm_v*.csv`, then validates and scores). Smart Tagging not used yet (T23).
+- **How our state machine / thresholds implement the above (`sm_v1_9` defaults):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A`, except a long gap after the ball was last seen near the edge; (3) switch team only after 25 frames (~1 s) of the other team being nearest and within 3 m; (4) contested/far → keep last team; (5) dead ball = ball outside the pitch, still near edge (25f), missing near edge (50f), or Smart Tagging SET PIECES for the **first 50 frames** of each tagged event (tags are ~35s envelopes — full-span D hurt spellF1 in `sm_v1_3`); (6) sandwich-only merge of H/A islands shorter than 12 frames; (7) **fill `D` islands shorter than 50 frames** when both graded neighbours are the same live team (tracking noise, not real stoppages); (8) weak phase-team votes (build up / progression / attacking transition / creating chances) only when establishing — never overwrite controlled opposing possession; pending establish frames prefer nearest/soft vote over `X`. Optional (off by default): after a `D` stretch ≥50 frames, clear `last_live` and re-establish (`--restart-reset-dead-frames`). One command: `predict_v1.bat` / `predict_v1.sh`.
 
 ---
 
@@ -73,7 +73,7 @@ _Owner: E1_
 - Ball missing (~41% graded): what we do (hold / X / …): **Hold** last live team; `X` only if no live team established yet on graded frames.
 - Track identity noise / no player IDs: distances are team-collective (min home vs min away); no per-player identity.
 - Dead-ball detection vs “ball missing ≠ dead”: a missing ball still holds the last live team, unless it stays missing for 50 frames after a near-edge sighting. `D` also when the ball is outside the pitch, or still (≤0.5 m/s) near the edge for 25 frames (v1.1). Stoppages away from the edge are still under-called vs GT.
-- Smart Tagging as prior (not ground truth): not wired yet (T23).
+- Smart Tagging as prior (not ground truth): capped set-piece→D + narrow phase votes (`starter/smart_priors.py`). `--full-set-piece-dead` / `--no-phase-votes` / `--no-smart-tagging` for A/B.
 
 ---
 
@@ -113,7 +113,7 @@ Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.p
 
 - Dependency file: `requirements.txt` (`numpy`, `pandas`). Exact version pins are T40.
 - Output: next `evaluation/results/sm_v*.csv` — 199,319 data rows, header `frame,label`, labels `H`/`A`/`D`/`X`. Those filenames are gitignored.
-- Defaults (v1.1, no flags): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=12`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`.
+- Defaults (`sm_v1_9` path, no flags): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=12`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`, `set_piece_dead_cap_frames=50`, phase votes on, `restart_window_frames=0`, `min_dead_frames=50`, `restart_reset_dead_frames=0`. Short H/A merge is sandwich-only. Tried `control=37`/`min_spell=25` (`sm_v1_5`), restart 12/50 (`sm_v1_7`), and post-stoppage reset (`sm_v1_10`) — spellF1 down; not default.
 - Match `data/` is **not** in the public repo. Unpack the bundle into `./data`, or set `MTAH_DATA_DIR` first (`set MTAH_DATA_DIR=D:\mtah2027` in Command Prompt, `export MTAH_DATA_DIR=/path/to/mtah2027` on Mac). See `DATA.md`.
 
 ---
@@ -128,3 +128,7 @@ Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.p
 | 2026-10-26 | E1 | Tweak v1.1: sm_v1_1 (longer control, edge dead-ball heuristics, keep last_live on D) |
 | 2026-10-28 | E2 | T22: `predict_v1.bat` (Windows) and `predict_v1.sh` (Mac / Git Bash) predict, validate, and score. |
 | 2026-10-28 | E2 | Auto-increment `sm_v*` CSV versions on predict (1.0…1.10 → 2.0). |
+| 2026-10-28 | E1 | T23: Smart Tagging soft priors (SET PIECES→D; weak phase votes); `sm_v1_3`. |
+| 2026-10-28 | E1 | Soft set-piece cap 50f + narrow phases (`sm_v1_4` keep); hysteresis 37/25 (`sm_v1_5`) dropped. |
+| 2026-10-28 | E1 | T24: sandwich-only short-spell merge; restart hysteresis tried (`sm_v1_7`) and off by default. |
+| 2026-10-29 | E1 | Fill short D <50f (`sm_v1_9` keep; beats public smooth50); post-stoppage reset (`sm_v1_10`) dropped. |
