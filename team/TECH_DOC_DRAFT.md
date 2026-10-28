@@ -62,7 +62,7 @@ Plain language first; then how the code approximates it.
 - **What does not count as a change:** A simple touch without control; a deflection that does not intercept; winning an aerial duel without that team then controlling the ball.
 - **Possession as an interval:** A possession is a maximal run of one team with the ball alive. `H H H A A` is two possessions. `H H D D H H` is two possessions with a stoppage between them, not one. Dead ball is never a possession.
 - **Reference:** If our reading of these rules disagrees with the public 5-minute ground truth, the ground truth is right.
-- **How our state machine / thresholds implement the above (T20–T22, `sm_v1_1`):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A`, except a long gap after the ball was last seen near the edge; (3) switch team only after 25 frames (~1 s) of the other team being nearest and within 3 m; (4) contested/far → keep last team; (5) dead ball = ball outside the pitch, a still ball near the edge for 25 frames, or missing for 50 frames after a near-edge sighting; (6) merge H/A islands shorter than 12 frames (~0.5 s). One command: `predict_v1.bat` on Windows, or `bash predict_v1.sh` on Mac (writes `evaluation/results/sm_v1_1.csv`, then validates and scores). Smart Tagging not used yet (T23).
+- **How our state machine / thresholds implement the above (T20–T22, `sm_v1_1`):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A`, except a long gap after the ball was last seen near the edge; (3) switch team only after 25 frames (~1 s) of the other team being nearest and within 3 m; (4) contested/far → keep last team; (5) dead ball = ball outside the pitch, a still ball near the edge for 25 frames, or missing for 50 frames after a near-edge sighting; (6) merge H/A islands shorter than 12 frames (~0.5 s). One command: `predict_v1.bat` on Windows, or `bash predict_v1.sh` on Mac (writes the next auto `sm_v*.csv`, then validates and scores). Smart Tagging not used yet (T23).
 
 ---
 
@@ -109,10 +109,10 @@ bash predict_v1.sh
 
 On Windows, Git Bash can run the same `.sh`: `"C:\Program Files\Git\bin\bash.exe" predict_v1.sh`.
 
-Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.py` on the path that script prints as `SUBMISSION ...`, then `run_evaluation.py`. That path is the `--out` default in `starter/predict_v1.py` (currently `evaluation/results/sm_v1_1.csv`). Changing the default is enough; the scripts do not repeat the filename. They stop if predict or validate fails. The `.sh` uses `python` when it is on `PATH`, otherwise `python3`.
+Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.py` on the path that script prints as `SUBMISSION ...`, then `run_evaluation.py`. With no `--out`, predict picks the **next** `sm_v*` under `evaluation/results/` (scan latest → bump). Naming: `sm_v1.csv` = 1.0, `sm_v1_1.csv` … `sm_v1_10.csv` = 1.10, then `sm_v2.csv` = 2.0, etc. Minor max is **10**. Pass `--out path.csv` to skip auto-versioning. They stop if predict or validate fails. The `.sh` uses `python` when it is on `PATH`, otherwise `python3`.
 
 - Dependency file: `requirements.txt` (`numpy`, `pandas`). Exact version pins are T40.
-- Output: `evaluation/results/sm_v1_1.csv` — 199,319 data rows, header `frame,label`, labels `H`/`A`/`D`/`X`. That filename is gitignored.
+- Output: next `evaluation/results/sm_v*.csv` — 199,319 data rows, header `frame,label`, labels `H`/`A`/`D`/`X`. Those filenames are gitignored.
 - Defaults (v1.1, no flags): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=12`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`.
 - Match `data/` is **not** in the public repo. Unpack the bundle into `./data`, or set `MTAH_DATA_DIR` first (`set MTAH_DATA_DIR=D:\mtah2027` in Command Prompt, `export MTAH_DATA_DIR=/path/to/mtah2027` on Mac). See `DATA.md`.
 
@@ -127,3 +127,4 @@ Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.p
 | 2026-10-26 | E1 | T20/T21 sm_v1 implementation notes in §3–§4 |
 | 2026-10-26 | E1 | Tweak v1.1: sm_v1_1 (longer control, edge dead-ball heuristics, keep last_live on D) |
 | 2026-10-28 | E2 | T22: `predict_v1.bat` (Windows) and `predict_v1.sh` (Mac / Git Bash) predict, validate, and score. |
+| 2026-10-28 | E2 | Auto-increment `sm_v*` CSV versions on predict (1.0…1.10 → 2.0). |

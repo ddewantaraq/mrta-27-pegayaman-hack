@@ -59,7 +59,7 @@ Mac Terminal, or Git Bash on Windows:
 bash predict_v1.sh
 ```
 
-It writes whatever `--out` is set to in `starter/predict_v1.py` (currently `evaluation/results/sm_v1_1.csv`), checks that file, then prints the scoreboard. Change the default there and both scripts follow it. If predict or validate fails, they stop and do not score. Then add a RESULTS row (T30). Do not commit the CSV.
+It writes the **next** auto-incremented `evaluation/results/sm_v*.csv` (after `sm_v1` / `sm_v1_1` the next run is `sm_v1_2`, … up to `sm_v1_10` then `sm_v2`, …). The script prints `SUBMISSION …` and `VERSION major.minor`; the wrapper validates that path, then scores. Pass `--out path.csv` only if you must force a name. If predict or validate fails, they stop and do not score. Then add a RESULTS row (T30) using the printed filename. Do not commit the CSV.
 
 ---
 

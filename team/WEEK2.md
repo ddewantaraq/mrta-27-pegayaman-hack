@@ -49,3 +49,4 @@ When met, mark tasks `done` and start [WEEK3.md](WEEK3.md).
 
 - **2026-10-26 — Tweak v1.1:** ran `predict_v1.py` → `evaluation/results/sm_v1_1.csv` (defaults: control_frames=25, min_spell_frames=12, missing/still near-edge dead-ball). See [RESULTS.md](RESULTS.md).
 - **2026-10-28 — T22:** one command is `predict_v1.bat` (Command Prompt) or `bash predict_v1.sh` (Mac / Git Bash). Copy-paste for B is in [BEGINNER.md](BEGINNER.md). Reproduce steps in [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) §6.
+- **2026-10-28 — Auto versioning:** each predict without `--out` writes the next `sm_v*` (e.g. after `sm_v1_1` → `sm_v1_2`).

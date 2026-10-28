@@ -1,16 +1,21 @@
-"""T22 predict step: features -> state machine v1.1 -> submission CSV.
+"""T22 predict step: features -> state machine -> submission CSV.
 
 The one command that also validates and scores is predict_v1.bat (Command Prompt)
 or predict_v1.sh (Mac Terminal, or Git Bash on Windows). This file is the predict step.
 
-Writes evaluation/results/sm_v1_1.csv (199319 rows). Needs the match bundle in ./data
-or MTAH_DATA_DIR. Defaults are the v1.1 thresholds logged in team/RESULTS.md.
+By default writes the next auto-incremented file under evaluation/results/:
+  sm_v1.csv (1.0), sm_v1_1.csv … sm_v1_10.csv, then sm_v2_0.csv, …
+Pass --out PATH to force a path and skip auto-versioning.
+
+Needs the match bundle in ./data or MTAH_DATA_DIR. Defaults are the v1.1 thresholds
+logged in team/RESULTS.md.
 """
 
 from __future__ import print_function
 
 import argparse
 import os
+import re
 import sys
 
 import numpy as np
@@ -35,6 +40,65 @@ from state_machine import (  # noqa: E402
 )
 
 RESULTS_DIR = os.path.join(ROOT, "evaluation", "results")
+MAX_MINOR = 10
+
+# sm_v1.csv -> 1.0; sm_v1_1.csv -> 1.1; sm_v2_0.csv -> 2.0
+_RE_MAJOR_ONLY = re.compile(r"^sm_v(\d+)\.csv$", re.IGNORECASE)
+_RE_MAJOR_MINOR = re.compile(r"^sm_v(\d+)_(\d+)\.csv$", re.IGNORECASE)
+
+
+def parse_sm_version(filename):
+    """Return (major, minor) or None. minor is 0..10 inclusive when present."""
+    name = os.path.basename(filename)
+    m = _RE_MAJOR_MINOR.match(name)
+    if m:
+        major = int(m.group(1))
+        minor = int(m.group(2))
+        if 0 <= minor <= MAX_MINOR:
+            return major, minor
+        return None
+    m = _RE_MAJOR_ONLY.match(name)
+    if m:
+        return int(m.group(1)), 0
+    return None
+
+
+def format_sm_filename(major, minor):
+    """1.0 -> sm_v1.csv; 1.2 -> sm_v1_2.csv; 2.0 -> sm_v2.csv."""
+    if minor == 0:
+        return "sm_v{}.csv".format(major)
+    return "sm_v{}_{}.csv".format(major, minor)
+
+
+def latest_sm_version(results_dir):
+    """Max (major, minor) among sm_v*.csv in results_dir, or None."""
+    if not os.path.isdir(results_dir):
+        return None
+    best = None
+    for name in os.listdir(results_dir):
+        parsed = parse_sm_version(name)
+        if parsed is None:
+            continue
+        if best is None or parsed > best:
+            best = parsed
+    return best
+
+
+def next_sm_version(major, minor):
+    """Bump minor until 10, then major+1 with minor 0."""
+    if minor < MAX_MINOR:
+        return major, minor + 1
+    return major + 1, 0
+
+
+def resolve_auto_out_path(results_dir=RESULTS_DIR):
+    """Next submission path after the latest sm_v* file (or sm_v1.csv if none)."""
+    latest = latest_sm_version(results_dir)
+    if latest is None:
+        major, minor = 1, 0
+    else:
+        major, minor = next_sm_version(*latest)
+    return os.path.join(results_dir, format_sm_filename(major, minor)), major, minor
 
 
 def write_submission(path, labels):
@@ -51,7 +115,10 @@ def write_submission(path, labels):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--game", default=GAME)
-    parser.add_argument("--out", default=os.path.join(RESULTS_DIR, "sm_v1_1.csv"))
+    parser.add_argument(
+        "--out", default=None,
+        help="submission CSV path; default = next auto sm_v* under evaluation/results/",
+    )
     parser.add_argument("--control-frames", type=int, default=DEFAULT_CONTROL_FRAMES)
     parser.add_argument("--control-dist-m", type=float, default=DEFAULT_CONTROL_DIST_M)
     parser.add_argument("--out-margin", type=float, default=DEFAULT_OUT_MARGIN)
@@ -62,6 +129,14 @@ def main():
                         default=DEFAULT_STILL_NEAR_EDGE_FRAMES)
     parser.add_argument("--still-speed-m", type=float, default=DEFAULT_STILL_SPEED_M)
     args = parser.parse_args()
+
+    version = None
+    if args.out is None:
+        out_path, major, minor = resolve_auto_out_path(RESULTS_DIR)
+        version = (major, minor)
+    else:
+        out_path = args.out
+        version = parse_sm_version(out_path)
 
     print("T20 extract_features ...")
     features = extract_features(game=args.game)
@@ -76,7 +151,7 @@ def main():
         still_near_edge_frames=args.still_near_edge_frames,
         still_speed_m=args.still_speed_m,
     )
-    print("T21 state_machine v1.1 params: {}".format(params))
+    print("T21 state_machine params: {}".format(params))
 
     labels = label_possession(
         features,
@@ -89,12 +164,12 @@ def main():
         still_near_edge_frames=args.still_near_edge_frames,
         still_speed_m=args.still_speed_m,
     )
-    path = write_submission(args.out, labels)
+    path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
-    # SUBMISSION is the path the .bat and .sh validate. It is args.out, so changing
-    # the --out default (or passing --out) changes the file those scripts check.
     rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
     print("label counts: {}".format(counts))
+    if version is not None:
+        print("VERSION {}.{}".format(version[0], version[1]))
     print("SUBMISSION {}".format(rel))
     print("validate:  python evaluation/validate_submission.py {}".format(rel))
     print("score:     python evaluation/run_evaluation.py")
