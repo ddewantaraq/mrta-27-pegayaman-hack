@@ -51,9 +51,9 @@ Saying what you tried and **dropped** is useful.
 
 ## 3. Possession rules implemented
 
-_Owner: B from CHALLENGE.md (T12) · E1 maps to code_
+_Owner: B from CHALLENGE.md (T12) · E1 maps to code (`sm_v1_9` defaults)_
 
-Plain language first; then how the code approximates it.
+### Challenge rules (what we aim for)
 
 - **Live ball → one of H / A:** While the ball is in play, exactly one team has possession: home Barcelona (`H`) or away Athletic Club (`A`). There is no “contested” or “unknown” label in the ground truth on graded frames.
 - **Dead ball → D (not “who owns the restart”):** When play is stopped, the answer is simply `D`. We are not asked who will take the throw-in or free kick.
@@ -62,7 +62,24 @@ Plain language first; then how the code approximates it.
 - **What does not count as a change:** A simple touch without control; a deflection that does not intercept; winning an aerial duel without that team then controlling the ball.
 - **Possession as an interval:** A possession is a maximal run of one team with the ball alive. `H H H A A` is two possessions. `H H D D H H` is two possessions with a stoppage between them, not one. Dead ball is never a possession.
 - **Reference:** If our reading of these rules disagrees with the public 5-minute ground truth, the ground truth is right.
-- **How our state machine / thresholds implement the above (`sm_v1_9` defaults):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A`, except a long gap after the ball was last seen near the edge; (3) switch team only after 25 frames (~1 s) of the other team being nearest and within 3 m; (4) contested/far → keep last team; (5) dead ball = ball outside the pitch, still near edge (25f), missing near edge (50f), or Smart Tagging SET PIECES for the **first 50 frames** of each tagged event (tags are ~35s envelopes — full-span D hurt spellF1 in `sm_v1_3`); (6) sandwich-only merge of H/A islands shorter than 12 frames; (7) **fill `D` islands shorter than 50 frames** when both graded neighbours are the same live team (tracking noise, not real stoppages); (8) weak phase-team votes (build up / progression / attacking transition / creating chances) only when establishing — never overwrite controlled opposing possession; pending establish frames prefer nearest/soft vote over `X`. Optional (off by default): after a `D` stretch ≥50 frames, clear `last_live` and re-establish (`--restart-reset-dead-frames`). One command: `predict_v1.bat` / `predict_v1.sh`.
+
+### How code approximates this (`starter/features.py` + `state_machine.py` + `smart_priors.py`)
+
+Features (tactical ATD): ball present, ball speed/position, nearest team and distance (m).
+
+1. **Ungraded halves → `X`.**
+2. **Hold on missing ball:** keep last live `H`/`A` (ball missing ≠ dead). Exception: missing for 50 frames after last sighting near the edge → `D`.
+3. **Controlled switch:** opposing team must be nearest and within 3 m for 25 consecutive frames (~1 s) before possession flips; otherwise keep last team.
+4. **Loose / far / no nearest:** keep last live team (or soft prior / nearest while first establishing).
+5. **Dead ball (`D`):** out of pitch; still (≤0.5 m/s) near edge for 25 frames; missing-near-edge as above; plus Smart Tagging SET PIECES for only the **first 50 frames** of each tagged event (full ~35 s tags as `D` hurt spellF1 in `sm_v1_3`). Through short dead stretches, `last_live` stays frozen.
+6. **Post-process — sandwich merge:** H/A islands shorter than 12 frames absorbed only when both live neighbours are the **same** opposing team (flicker), not via prev-alone or post-`D` wipe.
+7. **Post-process — fill short dead blips (`sm_v1_9`):** `D` islands shorter than 50 frames (~2 s) with the **same** graded live team on both sides → rewrite as that team (tracking noise; public GT stoppages are all ≥ ~5.5 s).
+8. **Smart Tagging soft priors (not labels):** weak phase-team votes (build up / progression / attacking transition / creating chances) only when establishing — never overwrite a clear opposing controlled possession; ignore `Team=N/A`. Never copy phase spans wholesale to `H`/`A`.
+9. **Establish / cold-start:** while `last_live` is unset, prefer nearest team or soft phase vote over `X` when the ball is visible and close enough.
+
+**Tried and not default:** longer global hysteresis (`sm_v1_5`); asymmetric mid-play restart window (`sm_v1_7`); clear `last_live` after every long `D` (`sm_v1_10`). CLI still exposes `--restart-reset-dead-frames` / `--min-dead-frames` / `--no-smart-tagging` for A/B.
+
+One command: `predict_v1.bat` / `predict_v1.sh` (writes next `sm_v*`, validates, scores).
 
 ---
 
@@ -70,9 +87,9 @@ Plain language first; then how the code approximates it.
 
 _Owner: E1_
 
-- Ball missing (~41% graded): what we do (hold / X / …): **Hold** last live team; `X` only if no live team established yet on graded frames.
+- Ball missing (~41% graded): **Hold** last live team. If no live team yet and the ball is visible/close, prefer nearest team or soft phase vote over `X`; `X` mainly when still nothing to latch onto (or ungraded).
 - Track identity noise / no player IDs: distances are team-collective (min home vs min away); no per-player identity.
-- Dead-ball detection vs “ball missing ≠ dead”: a missing ball still holds the last live team, unless it stays missing for 50 frames after a near-edge sighting. `D` also when the ball is outside the pitch, or still (≤0.5 m/s) near the edge for 25 frames (v1.1). Stoppages away from the edge are still under-called vs GT.
+- Dead-ball detection vs “ball missing ≠ dead”: a missing ball still holds the last live team, unless it stays missing for 50 frames after a near-edge sighting. `D` also when the ball is outside the pitch, or still (≤0.5 m/s) near the edge for 25 frames (v1.1). Short same-team `D` blips (&lt;50 frames) are filled back to the live team post-pass (`sm_v1_9`). Stoppages away from the edge can still be under-called vs GT.
 - Smart Tagging as prior (not ground truth): capped set-piece→D + narrow phase votes (`starter/smart_priors.py`). `--full-set-piece-dead` / `--no-phase-votes` / `--no-smart-tagging` for A/B.
 
 ---
@@ -91,9 +108,10 @@ _Owner: B + E1_
 
 _Owner: E2_
 
-Someone with the data bundle and our public repo must regenerate the **same** submission file.
+Someone with the data bundle and our public repo must regenerate a submission that matches our
+kept defaults (`sm_v1_9` path). Step-by-step for external developers: **[README.md](README.md)**.
 
-From the repo root. No virtual environment required. Python 3.8+ with `numpy` and `pandas`.
+From the repo root. Python 3.8+ with `numpy` and `pandas`.
 
 ```bat
 pip install -r requirements.txt
@@ -132,3 +150,5 @@ Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.p
 | 2026-10-28 | E1 | Soft set-piece cap 50f + narrow phases (`sm_v1_4` keep); hysteresis 37/25 (`sm_v1_5`) dropped. |
 | 2026-10-28 | E1 | T24: sandwich-only short-spell merge; restart hysteresis tried (`sm_v1_7`) and off by default. |
 | 2026-10-29 | E1 | Fill short D <50f (`sm_v1_9` keep; beats public smooth50); post-stoppage reset (`sm_v1_10`) dropped. |
+| 2026-10-29 | E1 | §3 rewrite: challenge rules vs code mapping for `sm_v1_9`; §4 cold-start / short-D notes aligned. |
+| 2026-10-29 | E1 | Developer runbook [README.md](README.md); root README link; §6 points at it. |

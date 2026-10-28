@@ -94,6 +94,29 @@ It takes two seconds and it is the single most common way a good entry scores no
 
 ---
 
+## Our team model (reproduce)
+
+This fork includes a possession **state machine** (ATD features + Smart Tagging soft priors + short
+dead-ball cleanup). Defaults match our best logged public run (`sm_v1_9`).
+
+```bash
+pip install -r requirements.txt
+# unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
+bash predict_v1.sh          # Mac / Linux / Git Bash
+# predict_v1.bat            # Windows CMD
+```
+
+That writes the next `evaluation/results/sm_v*.csv`, validates it, and prints the public scoreboard.
+Expected ballpark vs public GT: spellF1 ~**0.42**, macroF1 ~**0.63** (see team log).
+
+**Full how-to, flags, and result notes:** **[team/README.md](team/README.md)** ·  
+Rules as implemented: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) ·  
+Score history: [team/RESULTS.md](team/RESULTS.md)
+
+`sm_v*.csv` files are gitignored — regenerate locally. Shipped `baseline_*.csv` still score without data.
+
+---
+
 ## Getting the data
 
 The match assets are released to enrolled participants who have accepted the terms of use.
