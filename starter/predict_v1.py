@@ -1,8 +1,10 @@
-"""T21 wire-up: features -> state machine v1.1 -> submission CSV.
+"""T22 predict step: features -> state machine v1.1 -> submission CSV.
 
-    .venv/bin/python starter/predict_v1.py
-    .venv/bin/python evaluation/validate_submission.py evaluation/results/sm_v1_1.csv
-    .venv/bin/python evaluation/run_evaluation.py
+The one command that also validates and scores is predict_v1.bat (Command Prompt)
+or predict_v1.sh (Mac Terminal, or Git Bash on Windows). This file is the predict step.
+
+Writes evaluation/results/sm_v1_1.csv (199319 rows). Needs the match bundle in ./data
+or MTAH_DATA_DIR. Defaults are the v1.1 thresholds logged in team/RESULTS.md.
 """
 
 from __future__ import print_function
@@ -89,10 +91,12 @@ def main():
     )
     path = write_submission(args.out, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
+    # SUBMISSION is the path the .bat and .sh validate. It is args.out, so changing
+    # the --out default (or passing --out) changes the file those scripts check.
+    rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
     print("label counts: {}".format(counts))
-    print("wrote {}".format(os.path.relpath(path, ROOT)))
-    print("validate:  python evaluation/validate_submission.py {}".format(
-        os.path.relpath(path, ROOT)))
+    print("SUBMISSION {}".format(rel))
+    print("validate:  python evaluation/validate_submission.py {}".format(rel))
     print("score:     python evaluation/run_evaluation.py")
 
 

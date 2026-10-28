@@ -43,6 +43,24 @@ Replace `<file>.csv` with the real name. If validation fails, the official score
 python starter/baseline.py
 ```
 
+### Regenerate, validate, and score the current model (T22)
+
+From the repo root, with the match bundle in `data\` (or `MTAH_DATA_DIR` set). One command does all three.
+
+Command Prompt:
+
+```bat
+predict_v1.bat
+```
+
+Mac Terminal, or Git Bash on Windows:
+
+```bash
+bash predict_v1.sh
+```
+
+It writes whatever `--out` is set to in `starter/predict_v1.py` (currently `evaluation/results/sm_v1_1.csv`), checks that file, then prints the scoreboard. Change the default there and both scripts follow it. If predict or validate fails, they stop and do not score. Then add a RESULTS row (T30). Do not commit the CSV.
+
 ---
 
 ## Your tasks (IDs)

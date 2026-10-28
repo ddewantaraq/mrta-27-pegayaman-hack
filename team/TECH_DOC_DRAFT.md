@@ -62,7 +62,7 @@ Plain language first; then how the code approximates it.
 - **What does not count as a change:** A simple touch without control; a deflection that does not intercept; winning an aerial duel without that team then controlling the ball.
 - **Possession as an interval:** A possession is a maximal run of one team with the ball alive. `H H H A A` is two possessions. `H H D D H H` is two possessions with a stoppage between them, not one. Dead ball is never a possession.
 - **Reference:** If our reading of these rules disagrees with the public 5-minute ground truth, the ground truth is right.
-- **How our state machine / thresholds implement the above (T20–T21, `sm_v1`):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A` (never auto-`D`); (3) switch team only after ~15 frames of opposing nearest within ~3 m (control hysteresis); (4) contested/far → keep last team; (5) basic dead-ball = ball **visible** outside a normalized pitch margin; (6) merge sub-~0.3 s H/A islands. Run: `python starter/predict_v1.py`. Smart Tagging not used yet (T23).
+- **How our state machine / thresholds implement the above (T20–T22, `sm_v1_1`):** Features from tactical ATD (`starter/features.py`): ball present, nearest team, min distances (m). `starter/state_machine.py` then: (1) ungraded halves → `X`; (2) ball missing → **hold** last `H`/`A`, except a long gap after the ball was last seen near the edge; (3) switch team only after 25 frames (~1 s) of the other team being nearest and within 3 m; (4) contested/far → keep last team; (5) dead ball = ball outside the pitch, a still ball near the edge for 25 frames, or missing for 50 frames after a near-edge sighting; (6) merge H/A islands shorter than 12 frames (~0.5 s). One command: `predict_v1.bat` on Windows, or `bash predict_v1.sh` on Mac (writes `evaluation/results/sm_v1_1.csv`, then validates and scores). Smart Tagging not used yet (T23).
 
 ---
 
@@ -72,7 +72,7 @@ _Owner: E1_
 
 - Ball missing (~41% graded): what we do (hold / X / …): **Hold** last live team; `X` only if no live team established yet on graded frames.
 - Track identity noise / no player IDs: distances are team-collective (min home vs min away); no per-player identity.
-- Dead-ball detection vs “ball missing ≠ dead”: missing stays live-hold; `D` only from out-of-pitch (v1) — still under-calling stoppages vs GT.
+- Dead-ball detection vs “ball missing ≠ dead”: a missing ball still holds the last live team, unless it stays missing for 50 frames after a near-edge sighting. `D` also when the ball is outside the pitch, or still (≤0.5 m/s) near the edge for 25 frames (v1.1). Stoppages away from the edge are still under-called vs GT.
 - Smart Tagging as prior (not ground truth): not wired yet (T23).
 
 ---
@@ -93,20 +93,28 @@ _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate the **same** submission file.
 
-```bash
-# install
-…
+From the repo root. No virtual environment required. Python 3.8+ with `numpy` and `pandas`.
 
-# run (exact command that writes the submission CSV)
-…
-
-# validate
-python evaluation/validate_submission.py path/to/<team_name>.csv
+```bat
+pip install -r requirements.txt
+predict_v1.bat
 ```
 
-- Pinned dependency file: …
-- Expected output path / filename: …
-- Note: match `data/` is **not** in the public repo; point `MTAH_DATA_DIR` or unpack into `./data` per `DATA.md`.
+Mac, from the repo root:
+
+```bash
+pip install -r requirements.txt
+bash predict_v1.sh
+```
+
+On Windows, Git Bash can run the same `.sh`: `"C:\Program Files\Git\bin\bash.exe" predict_v1.sh`.
+
+Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.py` on the path that script prints as `SUBMISSION ...`, then `run_evaluation.py`. That path is the `--out` default in `starter/predict_v1.py` (currently `evaluation/results/sm_v1_1.csv`). Changing the default is enough; the scripts do not repeat the filename. They stop if predict or validate fails. The `.sh` uses `python` when it is on `PATH`, otherwise `python3`.
+
+- Dependency file: `requirements.txt` (`numpy`, `pandas`). Exact version pins are T40.
+- Output: `evaluation/results/sm_v1_1.csv` — 199,319 data rows, header `frame,label`, labels `H`/`A`/`D`/`X`. That filename is gitignored.
+- Defaults (v1.1, no flags): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=12`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`.
+- Match `data/` is **not** in the public repo. Unpack the bundle into `./data`, or set `MTAH_DATA_DIR` first (`set MTAH_DATA_DIR=D:\mtah2027` in Command Prompt, `export MTAH_DATA_DIR=/path/to/mtah2027` on Mac). See `DATA.md`.
 
 ---
 
@@ -118,3 +126,4 @@ python evaluation/validate_submission.py path/to/<team_name>.csv
 | 2026-10-24 | B / E1 | T12 section 3 possession rules; T13/T13r section 0 metrics primer |
 | 2026-10-26 | E1 | T20/T21 sm_v1 implementation notes in §3–§4 |
 | 2026-10-26 | E1 | Tweak v1.1: sm_v1_1 (longer control, edge dead-ball heuristics, keep last_live on D) |
+| 2026-10-28 | E2 | T22: `predict_v1.bat` (Windows) and `predict_v1.sh` (Mac / Git Bash) predict, validate, and score. |

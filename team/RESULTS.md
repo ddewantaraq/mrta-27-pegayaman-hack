@@ -37,6 +37,7 @@ Add a new blank row for every model CSV (T30).
 | 2026-10-24 | T11 — `starter/baseline.py` regenerated four `baseline_*.csv` (ball on 113488/199319 frames, 56.9%) |
 | 2026-10-24 | T13r signed off 2026-10-24 |
 | 2026-10-26 | T20/T21 — `starter/features.py` + `state_machine.py` + `predict_v1.py` → `evaluation/results/sm_v1.csv` |
+| 2026-10-28 | T22 — `predict_v1.bat` and `predict_v1.sh` write `evaluation/results/sm_v1_1.csv`, validate, then score. Validate OK (199319 rows). Public score matches the 2026-10-26 sm_v1_1 row (spellF1 0.3111, poss 28, dur 9.3 s) |
 
 ---
 

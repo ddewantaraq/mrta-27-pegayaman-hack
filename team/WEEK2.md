@@ -12,7 +12,7 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 - [x] **T20** — E1: Feature extract (ball present, nearest team, distances)
 - [x] **T21** — E1: State machine v1 (hold, control hysteresis, basic dead-ball)
-- [ ] **T22** — E2: One-command predict → valid 199319-row CSV
+- [x] **T22** — E2: One-command predict → valid 199319-row CSV
 - [ ] **T30** — B: Validate + score + log every new CSV (start ongoing habit)
 - [ ] **T31** — B (+ E1 interpret): poss / mean dur vs public GT (~17 / ~14.2 s)
 
@@ -48,3 +48,4 @@ When met, mark tasks `done` and start [WEEK3.md](WEEK3.md).
 ## Notes
 
 - **2026-10-26 — Tweak v1.1:** ran `predict_v1.py` → `evaluation/results/sm_v1_1.csv` (defaults: control_frames=25, min_spell_frames=12, missing/still near-edge dead-ball). See [RESULTS.md](RESULTS.md).
+- **2026-10-28 — T22:** one command is `predict_v1.bat` (Command Prompt) or `bash predict_v1.sh` (Mac / Git Bash). Copy-paste for B is in [BEGINNER.md](BEGINNER.md). Reproduce steps in [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) §6.
