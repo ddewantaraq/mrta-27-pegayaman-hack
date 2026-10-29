@@ -51,7 +51,7 @@ Saying what you tried and **dropped** is useful.
 
 ## 3. Possession rules implemented
 
-_Owner: B from CHALLENGE.md (T12) · E1 maps to code (`sm_v1_9` defaults)_
+_Owner: B from CHALLENGE.md (T12) · E1 maps to code (`sm_v2` defaults)_
 
 ### Challenge rules (what we aim for)
 
@@ -72,10 +72,11 @@ Features (tactical ATD): ball present, ball speed/position, nearest team and dis
 3. **Controlled switch:** opposing team must be nearest and within 3 m for 25 consecutive frames (~1 s) before possession flips; otherwise keep last team.
 4. **Loose / far / no nearest:** keep last live team (or soft prior / nearest while first establishing).
 5. **Dead ball (`D`):** out of pitch; still (≤0.5 m/s) near edge for 25 frames; missing-near-edge as above; plus Smart Tagging SET PIECES for only the **first 50 frames** of each tagged event (full ~35 s tags as `D` hurt spellF1 in `sm_v1_3`). Through short dead stretches, `last_live` stays frozen.
-6. **Post-process — sandwich merge:** H/A islands shorter than 12 frames absorbed only when both live neighbours are the **same** opposing team (flicker), not via prev-alone or post-`D` wipe.
+6. **Post-process — sandwich merge (`sm_v2`):** H/A islands shorter than 50 frames (~2 s) absorbed only when both live neighbours are the **same** opposing team (flicker), not via prev-alone or post-`D` wipe. Raising from 12→50 cut spur and lifted spellF1 vs `sm_v1_9`; merge ≥100 frames banned (spell regress).
 7. **Post-process — fill short dead blips (`sm_v1_9`):** `D` islands shorter than 50 frames (~2 s) with the **same** graded live team on both sides → rewrite as that team (tracking noise; public GT stoppages are all ≥ ~5.5 s).
-8. **Smart Tagging soft priors (not labels):** weak phase-team votes (build up / progression / attacking transition / creating chances) only when establishing — never overwrite a clear opposing controlled possession; ignore `Team=N/A`. Never copy phase spans wholesale to `H`/`A`.
-9. **Establish / cold-start:** while `last_live` is unset, prefer nearest team or soft phase vote over `X` when the ball is visible and close enough.
+8. **Post-process — fill short graded abstain (`sm_v2`):** graded `X` runs ≤50 frames → fill with next live `H`/`A` if present, else previous; ungraded untouched. Safe polish (abstain↓; spell flat).
+9. **Smart Tagging soft priors (not labels):** weak phase-team votes (build up / progression / attacking transition / creating chances) only when establishing — never overwrite a clear opposing controlled possession; ignore `Team=N/A`. Never copy phase spans wholesale to `H`/`A`.
+10. **Establish / cold-start:** while `last_live` is unset, prefer nearest team or soft phase vote over `X` when the ball is visible and close enough.
 
 **Tried and not default:** longer global hysteresis (`sm_v1_5`); asymmetric mid-play restart window (`sm_v1_7`); clear `last_live` after every long `D` (`sm_v1_10`). CLI still exposes `--restart-reset-dead-frames` / `--min-dead-frames` / `--no-smart-tagging` for A/B.
 
@@ -109,7 +110,7 @@ _Owner: B + E1_
 _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate a submission that matches our
-kept defaults (`sm_v1_9` path). Step-by-step for external developers: **[README.md](README.md)**.
+kept defaults (`sm_v2` path). Step-by-step for external developers: **[README.md](README.md)**.
 
 From the repo root. Python 3.8+ with `numpy` and `pandas`.
 
@@ -131,7 +132,7 @@ Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.p
 
 - Dependency file: `requirements.txt` (`numpy`, `pandas`). Exact version pins are T40.
 - Output: next `evaluation/results/sm_v*.csv` — 199,319 data rows, header `frame,label`, labels `H`/`A`/`D`/`X`. Those filenames are gitignored.
-- Defaults (`sm_v1_9` path, no flags): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=12`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`, `set_piece_dead_cap_frames=50`, phase votes on, `restart_window_frames=0`, `min_dead_frames=50`, `restart_reset_dead_frames=0`. Short H/A merge is sandwich-only. Tried `control=37`/`min_spell=25` (`sm_v1_5`), restart 12/50 (`sm_v1_7`), and post-stoppage reset (`sm_v1_10`) — spellF1 down; not default.
+- Defaults (`sm_v2` path, no flags): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=50`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`, `set_piece_dead_cap_frames=50`, phase votes on, `restart_window_frames=0`, `min_dead_frames=50`, `restart_reset_dead_frames=0`, short graded-`X` fill ≤50f. Short H/A merge is sandwich-only. Tried `control=37`/`min_spell=25` (`sm_v1_5`), restart 12/50 (`sm_v1_7`), post-stoppage reset (`sm_v1_10`), and merge ≥100 — spellF1 down; not default.
 - Match `data/` is **not** in the public repo. Unpack the bundle into `./data`, or set `MTAH_DATA_DIR` first (`set MTAH_DATA_DIR=D:\mtah2027` in Command Prompt, `export MTAH_DATA_DIR=/path/to/mtah2027` on Mac). See `DATA.md`.
 
 ---
@@ -152,3 +153,4 @@ Both scripts run, in order: `starter/predict_v1.py`, then `validate_submission.p
 | 2026-10-29 | E1 | Fill short D <50f (`sm_v1_9` keep; beats public smooth50); post-stoppage reset (`sm_v1_10`) dropped. |
 | 2026-10-29 | E1 | §3 rewrite: challenge rules vs code mapping for `sm_v1_9`; §4 cold-start / short-D notes aligned. |
 | 2026-10-29 | E1 | Developer runbook [README.md](README.md); root README link; §6 points at it. |
+| 2026-10-29 | E1 | `sm_v2`: sandwich `min_spell=50` + `_fill_short_abstain`; §3/§6 defaults updated. |

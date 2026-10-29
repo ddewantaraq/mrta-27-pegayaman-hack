@@ -97,7 +97,7 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork includes a possession **state machine** (ATD features + Smart Tagging soft priors + short
-dead-ball cleanup). Defaults match our best logged public run (`sm_v1_9`).
+dead-ball cleanup). Defaults match our best logged public run (`sm_v2`).
 
 ```bash
 pip install -r requirements.txt
@@ -107,7 +107,7 @@ bash predict_v1.sh          # Mac / Linux / Git Bash
 ```
 
 That writes the next `evaluation/results/sm_v*.csv`, validates it, and prints the public scoreboard.
-Expected ballpark vs public GT: spellF1 ~**0.42**, macroF1 ~**0.63** (see team log).
+Expected ballpark vs public GT: spellF1 ~**0.46**, macroF1 ~**0.64** (see team log).
 
 **Full how-to, flags, and result notes:** **[team/README.md](team/README.md)** ·  
 Rules as implemented: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) ·  

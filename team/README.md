@@ -16,7 +16,7 @@ Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_D
 | Features / rules / priors | `starter/features.py`, `state_machine.py`, `smart_priors.py` |
 | Public scorer | `evaluation/run_evaluation.py` |
 
-**Current default (best kept run):** behaviour of **`sm_v1_9`** — ATD state machine + capped set-piece priors + fill short same-team dead-ball blips (`min_dead_frames=50`).
+**Current default (best kept run):** behaviour of **`sm_v2`** — ATD state machine + capped set-piece priors + fill short same-team dead-ball blips (`min_dead_frames=50`) + sandwich merge (`min_spell_frames=50`) + fill short graded `X`.
 
 ---
 
@@ -85,21 +85,21 @@ python evaluation/run_evaluation.py
 
 **Validate:** `OK` and `199319 rows`.
 
-**Scoreboard** (public GT only — not the private full-match board): look for your new `sm_v*` row. With current defaults you should land near our logged **`sm_v1_9`** public numbers:
+**Scoreboard** (public GT only — not the private full-match board): look for your new `sm_v*` row. With current defaults you should land near our logged **`sm_v2`** public numbers:
 
-| Metric | Our `sm_v1_9` (logged) | Public `baseline_smooth50` | Public GT ballpark |
-|--------|------------------------|----------------------------|--------------------|
-| spellF1 | ~0.42 | 0.326 | — |
-| macroF1 | ~0.63 | 0.621 | — |
-| possessions | ~22 | 26 | ~17 |
-| mean dur (s) | ~11.9 | 10.8 | ~14.2 |
+| Metric | Our `sm_v2` (logged) | Public `baseline_smooth50` | Public GT ballpark |
+|--------|----------------------|----------------------------|--------------------|
+| spellF1 | ~0.46 | 0.326 | — |
+| macroF1 | ~0.64 | 0.621 | — |
+| possessions | ~20 | 26 | ~17 |
+| mean dur (s) | ~13.1 | 10.8 | ~14.2 |
 
 Full table and keep/drop notes: [RESULTS.md](RESULTS.md).  
 **Ranking in the competition** uses private full-match spellF1; local scores are a proxy. Do not tune only to beat public `baseline_smooth125` (see [EVALUATION.md](../EVALUATION.md)).
 
 ---
 
-## Useful flags (defaults = `sm_v1_9` path)
+## Useful flags (defaults = `sm_v2` path)
 
 | Flag | Default | Meaning |
 |------|---------|---------|
@@ -109,7 +109,7 @@ Full table and keep/drop notes: [RESULTS.md](RESULTS.md).
 | `--no-phase-votes` | off | Keep set-piece prior; disable weak phase-team votes |
 | `--full-set-piece-dead` | off | Legacy: full tagged set-piece span as `D` (hurts spellF1) |
 | `--restart-reset-dead-frames` | `0` | After long `D`, clear last team and re-establish (`50` tried as `sm_v1_10`, dropped) |
-| `--control-frames` / `--min-spell-frames` | `25` / `12` | Mid-play switch hysteresis / short H–A flicker merge |
+| `--control-frames` / `--min-spell-frames` | `25` / `50` | Mid-play switch hysteresis / sandwich H–A flicker merge |
 
 Example A/B without Smart Tagging:
 
@@ -138,7 +138,7 @@ python evaluation/run_evaluation.py
 |---------|----------------|
 | Predict fails opening ATD / tags | `data/` missing or wrong; check `MTAH_DATA_DIR` |
 | Validate fails row count | Wrong output / truncated write |
-| Your spellF1 ≪ 0.42 with defaults | Stale code, or `--min-dead-frames 0` / `--full-set-piece-dead` |
+| Your spellF1 ≪ 0.46 with defaults | Stale code, or `--min-dead-frames 0` / `--min-spell-frames 12` / `--full-set-piece-dead` |
 | Scoreboard only shows baselines | No `sm_v*.csv` yet — run `predict_v1` first |
 
 Questions about the official challenge: see [FAQ.md](../FAQ.md). Team notes: edit [RESULTS.md](RESULTS.md) when you add a new CSV.

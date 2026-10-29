@@ -7,11 +7,10 @@ By default writes the next auto-incremented file under evaluation/results/:
   sm_v1.csv (1.0), sm_v1_1.csv … sm_v1_10.csv, then sm_v2_0.csv, …
 Pass --out PATH to force a path and skip auto-versioning.
 
-Needs the match bundle in ./data or MTAH_DATA_DIR. Defaults: control=25, min_spell=12
-(v1.1), set-piece dead cap=50, min_dead_frames=50 (fill short D blips),
-restart_window=0, restart_reset_dead_frames=0 (enable with --restart-reset-dead-frames 50).
-Smart Tagging soft priors on by default; pass --no-smart-tagging to disable.
---full-set-piece-dead restores T23 full-span D.
+Needs the match bundle in ./data or MTAH_DATA_DIR. Defaults match kept sm_v2 path:
+control=25, min_spell=50 (sandwich merge), set-piece cap=50, min_dead_frames=50,
+restart_window=0, restart_reset_dead_frames=0. Smart Tagging soft priors on by default;
+pass --no-smart-tagging to disable. --full-set-piece-dead restores T23 full-span D.
 """
 
 from __future__ import print_function

@@ -10,6 +10,7 @@ Rules encoded (see CHALLENGE.md / team TECH_DOC):
   - T24: sandwich-only short-spell merge; shorter opposing switch soon after leaving D
   - Short D blips (< min_dead_frames) sandwiched by same team -> fill as that team
   - After a long D (>= restart_reset_dead_frames), clear last_live and re-establish
+  - Short graded X runs filled from next/prev live team (cold-start polish)
 """
 
 from __future__ import print_function
@@ -21,11 +22,12 @@ from games import GAME, half_video_blocks
 HOME, AWAY, NOBODY = 0, 1, -1
 LABEL_H, LABEL_A, LABEL_D, LABEL_X = "H", "A", "D", "X"
 
-# Defaults: soft set-piece priors + v1.1 hysteresis (37/25 spell-regressed on public window)
+# Defaults: soft set-piece priors + short-D fill + sandwich merge (sm_v2 path)
 DEFAULT_CONTROL_FRAMES = 25          # 1.0 s at 25 fps
 DEFAULT_CONTROL_DIST_M = 3.0         # metres
 DEFAULT_OUT_MARGIN = 0.02            # normalized pitch: outside [m, 1-m] => dead candidate
-DEFAULT_MIN_SPELL_FRAMES = 12        # merge shorter H/A islands (~0.5 s)
+DEFAULT_MIN_SPELL_FRAMES = 50        # sandwich-merge opposing H/A islands shorter than ~2 s
+DEFAULT_MAX_ABSTAIN_FILL_FRAMES = 50  # fill short graded X from next/prev live team
 DEFAULT_MISSING_NEAR_EDGE_FRAMES = 50  # 2 s missing after last ball near edge -> D
 DEFAULT_STILL_NEAR_EDGE_FRAMES = 25    # 1 s slow ball near edge -> D
 DEFAULT_STILL_SPEED_M = 0.5            # m/s
@@ -285,6 +287,7 @@ def label_possession(
         labels = _merge_short_spells(labels, graded, min_spell_frames)
     if min_dead_frames > 0:
         labels = _fill_short_dead(labels, graded, min_dead_frames)
+    labels = _fill_short_abstain(labels, graded, DEFAULT_MAX_ABSTAIN_FILL_FRAMES)
 
     return labels
 
@@ -340,6 +343,34 @@ def _fill_short_dead(labels, graded, min_frames):
                     and nxt in (LABEL_H, LABEL_A)
                     and prev == nxt):
                 out[i:j] = prev
+        i = j
+    return out
+
+
+def _fill_short_abstain(labels, graded, max_frames):
+    """Fill short graded X runs from next live H/A, else previous live H/A.
+
+    Ungraded frames stay X. Long X gaps are left alone.
+    """
+    if max_frames <= 0:
+        return labels
+    out = labels.copy()
+    n = len(out)
+    i = 0
+    while i < n:
+        if not graded[i] or out[i] != LABEL_X:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and graded[j] and out[j] == LABEL_X:
+            j += 1
+        length = j - i
+        if length <= max_frames:
+            nxt = out[j] if j < n and graded[j] and out[j] in (LABEL_H, LABEL_A) else None
+            prev = out[i - 1] if i > 0 and graded[i - 1] and out[i - 1] in (LABEL_H, LABEL_A) else None
+            fill = nxt if nxt is not None else prev
+            if fill is not None:
+                out[i:j] = fill
         i = j
     return out
 

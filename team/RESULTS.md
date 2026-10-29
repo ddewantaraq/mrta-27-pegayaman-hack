@@ -29,6 +29,7 @@ Scored **2026-10-24** against public GT via `.venv/bin/python evaluation/run_eva
 | 2026-10-28 | sm_v1_8 | E1 | 0.6178 | 0.3130 | 29 | 8.9 | T24 merge + no phase votes; macro down |
 | 2026-10-29 | sm_v1_9 | E1 | 0.6341 | 0.4205 | 22 | 11.9 | Fill short D <50f; beats public smooth50 |
 | 2026-10-29 | sm_v1_10 | E1 | 0.6406 | 0.3905 | 25 | 10.4 | + restart reset after D≥50f; spell down vs v1.9 |
+| 2026-10-29 | sm_v2 | E1 | 0.6397 | 0.4649 | 20 | 13.1 | min_spell=50 sandwich + short-X fill; beats v1.9 |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30).
@@ -52,6 +53,7 @@ Add a new blank row for every model CSV (T30).
 | 2026-10-28 | T24 diagnose `sm_v1_4` @IoU0.5: ~10 missed GT spells; ~7 near-miss (lagged/shifted edges, lags often +19…+59f); ~3 zero same-team overlap; long GT spells often fragmented by predicted D. Spurious: short islands after D / between opposing runs. |
 | 2026-10-28 | T24 code: sandwich-only `_merge_short_spells`; `--restart-control-frames` / `--restart-window-frames` (default window=0). `sm_v1_6`–`sm_v1_8`. |
 | 2026-10-29 | Short-D fill: `_fill_short_dead` (`min_dead_frames=50`); CLI `--min-dead-frames`. Post-stoppage reset CLI `--restart-reset-dead-frames` / `--restart-establish-frames` (default reset=0). `sm_v1_9` / `sm_v1_10`. |
+| 2026-10-29 | `DEFAULT_MIN_SPELL_FRAMES=50` + `_fill_short_abstain`; `sm_v2.csv` (VERSION 2.0). |
 
 ---
 
@@ -72,3 +74,4 @@ Short bullets only — why a change was kept or dropped. Prefer poss/dur and fai
 | 2026-10-28 | T24 `--no-phase-votes` → sm_v1_8 | **no** | spellF1 tied 0.313; macro 0.627→0.618. Keep phase votes on. |
 | 2026-10-29 | Fill short D <50f → sm_v1_9 | **yes (default)** | vs sm_v1_4: spellF1 0.313→0.421, macro 0.627→0.634, matched@0.5 8→9, poss 29→22 / dur 8.9→11.9. Beats public smooth50 (0.326). FULL-match sanity poss 449→366 / mean dur 11.1→13.8 s (plausible). Physical reason: GT stoppages ≥138f; SM short D blips are tracking noise splitting spells. Cutoff 25≈50 in prior probe (stable). |
 | 2026-10-29 | Restart reset after D≥50f → sm_v1_10 | **no** (reset default stays 0) | vs sm_v1_9: spellF1 0.421→0.391; matched@0.5 tied 9 but spur 13→16; abstain 15→144; FULL poss 366→418 / dur 13.8→11.5. Macro up slightly; spell/structure worse. Keep `--restart-reset-dead-frames` behind flag. |
+| 2026-10-29 | Sandwich min_spell 12→50 + short graded-X fill → sm_v2 | **yes (default)** | vs sm_v1_9: spellF1 0.421→0.465, macro 0.634→0.640, poss 22→20 / dur 11.9→13.1 (closer to GT 17/14.2), spur 13→11, abstain 15→0, matched@0.5 held at 9. Gates passed. Stable with merge 50–75 in prior probe; merge≥100 banned. |
