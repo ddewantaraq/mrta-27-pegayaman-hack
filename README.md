@@ -100,11 +100,14 @@ This fork includes a possession **state machine** (ATD features + Smart Tagging 
 dead-ball cleanup). Defaults match our best logged public run (`sm_v2`).
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # once; keep activated
 pip install -r requirements.txt
 # unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
 bash predict_v1.sh          # Mac / Linux / Git Bash
 # predict_v1.bat            # Windows CMD
 ```
+
+`predict_v1.sh` picks `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`
 
 That writes the next `evaluation/results/sm_v*.csv`, validates it, and prints the public scoreboard.
 Expected ballpark vs public GT: spellF1 ~**0.46**, macroF1 ~**0.64** (see team log).
