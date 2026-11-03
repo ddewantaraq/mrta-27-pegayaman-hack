@@ -11,23 +11,28 @@ Roles overview: [TEAM.md](TEAM.md) · Your tasks: [TASKS.md](TASKS.md) (filter *
 From the repo root (`more-than-a-hack-2027/`):
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 python -c "import numpy, pandas; print('ok')"
 ```
 
 Mark **T01** done when that works. Note your Python version in [RESULTS.md](RESULTS.md).
 
+**Clarification:** do not ask E1 to keep a change because the public scoreboard improved. Your job is log + validate, not GT tuning. See [TEAM.md](TEAM.md).
+
 ---
 
 ## Commands you will use often
 
-### Score everything in `evaluation/results/`
+### Score everything in `evaluation/results/` (pipeline log only)
 
 ```bash
+source .venv/bin/activate
 python evaluation/run_evaluation.py
 ```
 
-Copy the printed board into [RESULTS.md](RESULTS.md) (see template rows).
+Copy the printed board into [RESULTS.md](RESULTS.md). **Do not** tell the team to keep/drop a model from that board.
 
 ### Check a submission before anyone “trusts” it
 
@@ -45,21 +50,16 @@ python starter/baseline.py
 
 ### Regenerate, validate, and score the current model (T22)
 
-From the repo root, with the match bundle in `data\` (or `MTAH_DATA_DIR` set). One command does all three.
-
-Command Prompt:
-
-```bat
-predict_v1.bat
-```
-
-Mac Terminal, or Git Bash on Windows:
+From the repo root, with the match bundle in `data/` (or `MTAH_DATA_DIR` set). Activate `.venv` first.
 
 ```bash
+source .venv/bin/activate
 bash predict_v1.sh
 ```
 
-It writes the **next** auto-incremented `evaluation/results/sm_v*.csv` (after `sm_v1` / `sm_v1_1` the next run is `sm_v1_2`, … up to `sm_v1_10` then `sm_v2`, …). The script prints `SUBMISSION …` and `VERSION major.minor`; the wrapper validates that path, then scores. Pass `--out path.csv` only if you must force a name. If predict or validate fails, they stop and do not score. Then add a RESULTS row (T30) using the printed filename. Do not commit the CSV.
+Windows CMD: `predict_v1.bat` after activating `.venv`.
+
+It writes the **next** auto-incremented `evaluation/results/sm_v*.csv`. Then add a RESULTS row (**T30**). Do not commit the CSV.
 
 ---
 
@@ -73,8 +73,8 @@ It writes the **next** auto-incremented `evaluation/results/sm_v*.csv` (after `s
 | **T10** | Run scorer on baselines → RESULTS |
 | **T12** | Write possession rules in plain language in TECH_DOC_DRAFT |
 | **T13** | Write spellF1 vs macroF1 for the team (E1 reviews) |
-| **T30** | After every new model CSV: validate + score + RESULTS row |
-| **T31** | Note poss / mean duration vs public GT (~17 poss, ~14.2 s) |
+| **T30** | After every new model CSV: validate + one pipeline score + RESULTS row (log only) |
+| **T31** | Note our own poss / mean duration (structure); not a GT target |
 | **T41** | Draft tech doc; E1/E2 fill technical holes |
 | **T43** | Submit the form on soft-deadline day (E2 checks files first) |
 
@@ -104,7 +104,7 @@ One row per scored file:
 
 `Date | File | Owner | macroF1 | spellF1 | poss | mean_dur_s | Notes`
 
-Example note: `fewer flickers than raw; still more poss than GT 17`.
+Example note: `fewer flickers than raw; graded X down vs sm_v1 restore`.
 
 ---
 

@@ -1,9 +1,9 @@
 # Team model — how to run and score
 
 This folder is our team workspace for **More than a Hack 2027** (ball possession).  
-The **runnable model** lives under [`starter/`](../starter/) (state machine + Smart Tagging soft priors). This README is for anyone who wants to **regenerate our submission and see public scores**.
+The **runnable model** lives under [`starter/`](../starter/) (ATD features + state machine). This README is for anyone who wants to **regenerate our submission**.
 
-Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) · Score log: [RESULTS.md](RESULTS.md)
+Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) · Score log: [RESULTS.md](RESULTS.md) · Process: [TEAM.md](TEAM.md)
 
 ---
 
@@ -13,28 +13,28 @@ Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_D
 |-------|------|
 | Predict | `starter/predict_v1.py` |
 | One-shot (predict → validate → score) | `predict_v1.sh` (Mac/Linux/Git Bash) or `predict_v1.bat` (Windows) |
-| Features / rules / priors | `starter/features.py`, `state_machine.py`, `smart_priors.py` |
-| Public scorer | `evaluation/run_evaluation.py` |
+| Features / rules | `starter/features.py`, `state_machine.py` |
+| Public scorer | `evaluation/run_evaluation.py` (pipeline **log** only — not a tuning loop) |
 
-**Current default (best kept run):** behaviour of **`sm_v2`** — ATD state machine + capped set-piece priors + fill short same-team dead-ball blips (`min_dead_frames=50`) + sandwich merge (`min_spell_frames=50`) + fill short graded `X`.
+**Current default (compliant path):** **`sm_v1_3`** (contested majority-near-ball on sm_v1_2). Restored `sm_v1` kept as `--control-frames 15 …` rollback; `--no-majority-near` for sm_v1_2 cand. Oct 2026 `sm_v2` / archive `sm_v1_3` are **not** the forward default.
+
+**Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
 
 ---
 
 ## Prerequisites
 
-1. **Python 3.8+** with `numpy` and `pandas`:
+1. **Python 3.8+** with `numpy` and `pandas` in a venv:
 
    ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate          # Windows: .venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-2. **Match data** (not in git). Enrol, download the bundle, then either:
-   - unpack into `./data` at the repo root, or  
-   - set `MTAH_DATA_DIR` to the bundle root  
+2. **Match data** (not in git). Unpack into `./data` or set `MTAH_DATA_DIR`. See [DATA.md](../DATA.md). Need tactical ATD (Smart Tagging optional; not default).
 
-   See [DATA.md](../DATA.md). You need at least tactical ATD + Smart Tagging XML (same as our predict path).
-
-3. From the **repository root** (directory that contains `starter/` and `evaluation/`).
+3. From the **repository root**.
 
 ---
 
@@ -43,39 +43,33 @@ Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_D
 **Mac / Linux / Git Bash:**
 
 ```bash
-pip install -r requirements.txt
+source .venv/bin/activate
 bash predict_v1.sh
 ```
+
+`predict_v1.sh` uses `python`/`python3` on `PATH` — activate `.venv` first or you get `No module named 'numpy'`.
 
 **Windows (Command Prompt):**
 
 ```bat
-pip install -r requirements.txt
+.venv\Scripts\activate
 predict_v1.bat
 ```
 
-That will:
+That will predict → validate → run the public scorer once for the **log**. Do **not** keep/drop model changes because the board moved.
 
-1. Extract features and run the state machine  
-2. Write the **next** auto-versioned file under `evaluation/results/`  
-   (`sm_v1.csv` → `sm_v1_1.csv` … → after `sm_v1_10.csv` comes `sm_v2.csv`)  
-3. Validate the CSV (199,319 rows)  
-4. Score **all** CSVs in `evaluation/results/` against the **public 5-minute** ground truth  
-
-`sm_v*.csv` files are **gitignored** (only `baseline_*.csv` ship in a fresh clone). You must run predict locally to produce our labels.
+`sm_v*.csv` files are **gitignored**. Do not commit them.
 
 ---
 
 ## Predict only / force a path
 
 ```bash
-# next auto sm_v* name
+source .venv/bin/activate
 python starter/predict_v1.py
-
-# fixed path (skips auto-version bump)
 python starter/predict_v1.py --out evaluation/results/mine.csv
-
 python evaluation/validate_submission.py evaluation/results/mine.csv
+# optional one-off log:
 python evaluation/run_evaluation.py
 ```
 
@@ -85,39 +79,21 @@ python evaluation/run_evaluation.py
 
 **Validate:** `OK` and `199319 rows`.
 
-**Scoreboard** (public GT only — not the private full-match board): look for your new `sm_v*` row. With current defaults you should land near our logged **`sm_v2`** public numbers:
+**Structure (no GT):** own graded poss count / mean duration / graded `X` should be plausible vs raw flicker (see RESULTS). Public scoreboard numbers are for the RESULTS log only — not a success gate.
 
-| Metric | Our `sm_v2` (logged) | Public `baseline_smooth50` | Public GT ballpark |
-|--------|----------------------|----------------------------|--------------------|
-| spellF1 | ~0.46 | 0.326 | — |
-| macroF1 | ~0.64 | 0.621 | — |
-| possessions | ~20 | 26 | ~17 |
-| mean dur (s) | ~13.1 | 10.8 | ~14.2 |
-
-Full table and keep/drop notes: [RESULTS.md](RESULTS.md).  
-**Ranking in the competition** uses private full-match spellF1; local scores are a proxy. Do not tune only to beat public `baseline_smooth125` (see [EVALUATION.md](../EVALUATION.md)).
+Full table: [RESULTS.md](RESULTS.md).
 
 ---
 
-## Useful flags (defaults = `sm_v2` path)
+## Useful flags (defaults = compliant `sm_v1_3`)
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `--min-dead-frames` | `50` | Fill short `D` islands when same team on both sides (`0` = off) |
-| `--set-piece-cap-frames` | `50` | Only first N frames of each SET PIECES tag → force `D` |
-| `--no-smart-tagging` | off | Disable Smart Tagging priors |
-| `--no-phase-votes` | off | Keep set-piece prior; disable weak phase-team votes |
-| `--full-set-piece-dead` | off | Legacy: full tagged set-piece span as `D` (hurts spellF1) |
-| `--restart-reset-dead-frames` | `0` | After long `D`, clear last team and re-establish (`50` tried as `sm_v1_10`, dropped) |
-| `--control-frames` / `--min-spell-frames` | `25` / `50` | Mid-play switch hysteresis / sandwich H–A flicker merge |
-
-Example A/B without Smart Tagging:
-
-```bash
-python starter/predict_v1.py --no-smart-tagging --out evaluation/results/ab_no_tags.csv
-python evaluation/validate_submission.py evaluation/results/ab_no_tags.csv
-python evaluation/run_evaluation.py
-```
+| `--control-frames` / `--min-spell-frames` | `25` / `12` | Control hysteresis (~1 s) / short H–A merge |
+| `--out-margin` | `0.02` | Out-of-pitch → `D` |
+| `--missing-near-edge-frames` / `--still-near-edge-frames` | `50` / `25` | Near-edge missing / still → `D` |
+| `--keep-last-live-on-dead` | on | Freeze last team through `D` |
+| `--clear-last-live-on-dead` | — | sm_v1 rollback behaviour |
 
 ---
 
@@ -136,9 +112,9 @@ python evaluation/run_evaluation.py
 
 | Symptom | Likely cause |
 |---------|----------------|
-| Predict fails opening ATD / tags | `data/` missing or wrong; check `MTAH_DATA_DIR` |
+| Predict fails opening ATD | `data/` missing or wrong; check `MTAH_DATA_DIR` |
+| `No module named 'numpy'` | `.venv` not activated |
 | Validate fails row count | Wrong output / truncated write |
-| Your spellF1 ≪ 0.46 with defaults | Stale code, or `--min-dead-frames 0` / `--min-spell-frames 12` / `--full-set-piece-dead` |
 | Scoreboard only shows baselines | No `sm_v*.csv` yet — run `predict_v1` first |
 
 Questions about the official challenge: see [FAQ.md](../FAQ.md). Team notes: edit [RESULTS.md](RESULTS.md) when you add a new CSV.

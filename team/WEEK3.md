@@ -1,8 +1,8 @@
-# Week 3 — Fusion + harden
+# Week 3 — Compliant rules path + harden
 
 **Dates:** 3–9 November 2026  
-**Theme:** Smart Tagging priors, tuning discipline, reproducible public repo  
-**Weekend lead:** E1 (priors/tune) + E2 (repo pack); B on RESULTS + tech doc
+**Theme:** Organiser clarification compliance, restore `sm_v1`, rule-justified `sm_v1_1`, reproducible public repo  
+**Weekend lead:** E1 (rules path) + E2 (repo pack); B on RESULTS + tech doc
 
 Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
@@ -10,10 +10,10 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 ## Checklist (task IDs)
 
-- [x] **T23** — E1: Smart Tagging soft priors (set pieces → D / restart; weak phase votes)
-- [x] **T24** — E1: Tune on failure modes + poss-count sanity (**not** public spellF1 alone)
-- [ ] **T30** — B: Keep logging every CSV
-- [ ] **T31** — B: Keep poss/dur notes when metrics move
+- [x] **T23** — Smart Tagging module exists (archived era); **not** default under compliant path until rule-only redesign
+- [x] **T24** — E1: Compliant upgrades from restored `sm_v1` → `sm_v1_1` (rule citations + local non-GT checks)
+- [ ] **T30** — B: Log every CSV (validate + one pipeline score; no keep/drop from board)
+- [ ] **T31** — B: Log own poss/dur only (not “closer to GT 17/14.2”)
 - [ ] **T40** — E2: Public repo skeleton, pinned deps, README run steps (no `data/`)
 - [ ] Tech doc → ~70%: fill more of [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) (B), E1 reviews technical claims
 
@@ -25,8 +25,8 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 | Day | Focus |
 |-----|--------|
-| Mon 3–Tue 4 | T23 tagging priors |
-| Wed 5–Thu 6 | T24 tune; log before/after in RESULTS |
+| Mon 3–Tue 4 | Clarification: freeze GT tuning; restore `sm_v1` as active baseline |
+| Wed 5–Thu 6 | T24: compliant `sm_v1_1` rule upgrades; RESULTS citations |
 | Fri 7 | E2: T40 repo skeleton |
 | Sat 8 | Repro dry-run: clean clone path documented |
 | Sun 9 | Doc push to ~70%; freeze feature wishlist for Week 4 |
@@ -37,10 +37,10 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 Week 3 is done when **all** are true:
 
-1. Smart Tagging priors are in the pipeline (**T23**) without copying phase intervals as labels.
+1. Active defaults are the **compliant** line (`sm_v1` restore and/or approved `sm_v1_1`), not archived `sm_v2`.
 2. Someone else can follow README and regenerate the submission from provided data (**T40** path ready).
-3. [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) is ~70% filled (approach, assets, rules, handling noise started).
-4. Tuning notes exist in RESULTS explaining *why* a change was kept (not “public spellF1 went up”).
+3. [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) is ~70% filled and states no GT parameter tuning.
+4. Every Keep? note cites **rule / physics / external data**, never public spellF1.
 
 When met, start [WEEK4.md](WEEK4.md).
 
@@ -48,5 +48,6 @@ When met, start [WEEK4.md](WEEK4.md).
 
 ## Notes
 
-- **2026-10-28 — T23:** Smart Tagging priors in `starter/smart_priors.py`; default on in `predict_v1.py` (`--no-smart-tagging` to disable). Output `sm_v1_3.csv`. See [RESULTS.md](RESULTS.md).
-- **2026-10-28 — T24:** Boundary diagnose on `sm_v1_4`; sandwich merge kept; asymmetric restart + no-phase dropped. Best public SM still `sm_v1_4`/`sm_v1_6` (spell 0.313).
+- **2026-11-03 — Clarification:** No train/tune/calibrate on possession GT or provided video. Public scorer = pipeline log only.
+- **2026-11-03 — Restore:** Code defaults match archived `sm_v1.csv` bit-for-bit (`sm_v1_restore.csv`).
+- **Archive:** Oct 2026 `sm_v1_1`…`sm_v2` rows kept in RESULTS for history; not the forward path.

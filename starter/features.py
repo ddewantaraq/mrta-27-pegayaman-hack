@@ -26,6 +26,9 @@ MISSING = "N"
 
 HOME, AWAY, NOBODY = 0, 1, -1
 
+# Same circle as state_machine control_dist_m: players inside "control" range
+DEFAULT_CLUSTER_RADIUS_M = 3.0
+
 
 def team_of_each_track(meta_path):
     """Array over track slots: 0 home, 1 away. Same convention as baseline.py."""
@@ -49,7 +52,7 @@ def _parse_xyz(group):
     return float(group[:c1]), float(group[c1 + 1:c2]), float(group[c2 + 1:])
 
 
-def extract_features(game=GAME, data_dir=None):
+def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_RADIUS_M):
     """Dict of length-n_frames arrays for the tactical ATD.
 
     Keys:
@@ -58,11 +61,14 @@ def extract_features(game=GAME, data_dir=None):
       ball_x_m, ball_y_m                    float metres (NaN if missing)
       nearest_team   int8  0=home 1=away -1=none
       min_dist_home, min_dist_away, nearest_dist   float metres (NaN if unavailable)
+      n_near_home, n_near_away   int8  players within cluster_radius_m of ball
+      majority_team  int8  team with more near players, or -1 on tie / none
     """
     meta_path, raw_path = require(["atd_meta", "atd_raw"], game, data_dir)
     n_frames = source_frames("tactical", game)
     length, width = GAMES[game]["pitch"]
     team_of_track = team_of_each_track(meta_path)
+    r2 = float(cluster_radius_m) * float(cluster_radius_m)
 
     ball_present = np.zeros(n_frames, dtype=bool)
     ball_x_norm = np.full(n_frames, np.nan, dtype=np.float64)
@@ -74,6 +80,9 @@ def extract_features(game=GAME, data_dir=None):
     min_dist_home = np.full(n_frames, np.nan, dtype=np.float64)
     min_dist_away = np.full(n_frames, np.nan, dtype=np.float64)
     nearest_dist = np.full(n_frames, np.nan, dtype=np.float64)
+    n_near_home = np.zeros(n_frames, dtype=np.int8)
+    n_near_away = np.zeros(n_frames, dtype=np.int8)
+    majority_team = np.full(n_frames, NOBODY, dtype=np.int8)
 
     with open(raw_path) as handle:
         for line in handle:
@@ -102,6 +111,8 @@ def extract_features(game=GAME, data_dir=None):
             best_team = NOBODY
             d_home = None
             d_away = None
+            nh = 0
+            na = 0
             for slot, group in enumerate(parts[1].split(GROUP_SEP)):
                 parsed = _parse_xyz(group)
                 if parsed is None:
@@ -115,9 +126,13 @@ def extract_features(game=GAME, data_dir=None):
                 if team == HOME:
                     if d_home is None or dist < d_home:
                         d_home = dist
+                    if d2 <= r2:
+                        nh += 1
                 elif team == AWAY:
                     if d_away is None or dist < d_away:
                         d_away = dist
+                    if d2 <= r2:
+                        na += 1
                 if best_d2 is None or d2 < best_d2:
                     best_d2 = d2
                     best_team = team
@@ -129,6 +144,12 @@ def extract_features(game=GAME, data_dir=None):
             if best_d2 is not None:
                 nearest_team[frame] = best_team
                 nearest_dist[frame] = best_d2 ** 0.5
+            n_near_home[frame] = nh
+            n_near_away[frame] = na
+            if nh > na:
+                majority_team[frame] = HOME
+            elif na > nh:
+                majority_team[frame] = AWAY
 
     return {
         "ball_present": ball_present,
@@ -141,9 +162,13 @@ def extract_features(game=GAME, data_dir=None):
         "min_dist_home": min_dist_home,
         "min_dist_away": min_dist_away,
         "nearest_dist": nearest_dist,
+        "n_near_home": n_near_home,
+        "n_near_away": n_near_away,
+        "majority_team": majority_team,
         "n_frames": n_frames,
         "pitch": (length, width),
         "game": game,
+        "cluster_radius_m": float(cluster_radius_m),
     }
 
 

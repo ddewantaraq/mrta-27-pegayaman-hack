@@ -9,7 +9,18 @@ Task board: [TASKS.md](TASKS.md) · Weeks: [WEEK1](WEEK1.md) · [WEEK2](WEEK2.md
 
 Produce a validated `frame,label` CSV (199,319 rows: `H` / `A` / `D` / `X`) that beats the published floor **spellF1 0.2433** (`baseline_smooth50`), plus a **public code repo** and a **short technical document**.
 
-Technical direction: tactical ATD + Smart Tagging → possession state machine → CSV. Optimize for **spellF1**, not per-frame accuracy. Broadcast / video CNN are out of scope until after code freeze.
+Technical direction: tactical ATD → possession state machine → CSV. Optimize for **possession structure** (what private spellF1 rewards), not per-frame accuracy.
+
+**Active model line:** compliant **`sm_v1_3`** (contested majority-near-ball on sm_v1_2). Rows `sm_v1_1`…`sm_v2` in RESULTS from Oct 2026 are an **archive** of a public-GT tuning era we no longer continue. Oct archive `sm_v1_3` (Smart Tagging) ≠ compliant `sm_v1_3_compliant`.
+
+**Next compliant levers** (rule/physics citations + local non-GT structure; no public-floor keep/drop):
+
+1. ~~Cluster / majority near ball~~ — **done** (`sm_v1_3`).
+2. **Soft Smart Tagging redesign** — set-piece → D capped; restart team as weak prior (not phase labels as truth).
+3. **Pass-like same-team travel** — consecutive same-team contacts / ball hops.
+4. **Homography / broadcast** — deferred until tactical line is frozen (T90).
+
+Old A/B with public floors + GT duration bands is **archived** — do not revive.
 
 ---
 
@@ -63,7 +74,11 @@ Use **E1 / E2 / B** as Owner in [TASKS.md](TASKS.md) until names are filled, the
 | **spellF1** | Did we recover whole possessions (intervals)? | **Yes — board ranks on this** |
 | **macroF1** | Right H/A/D letter per frame? | Tie-break only |
 
-Public 5-minute GT (~17 possessions, mean ~14.2 s) is for **pipeline sanity**, not for picking the final model. See repo `EVALUATION.md`.
+### Organiser clarification (Nov 2026) — binding
+
+Takes precedence over earlier docs/emails. **Not allowed:** checking output against the video; hand labels / manual data on this game; uploading provided data to AI services; **training, fitting, or calibrating (including parameter tuning) on the ground-truth possession data or on the provided video.** **Allowed:** automatic checks on provided inputs; inspecting data/video to *understand* possession; using ATD / Smart Tagging / video as *algorithm inputs*; intermediate files; licensed external datasets. Tune parameters only on **external** data (or set them from challenge/physics rules without a GT search).
+
+Public 5-minute GT: **one-off pipeline check** (validate + scorer runs) only. **Forbidden:** iterative keep/drop because public spellF1 / macro / matched / “closer to GT 17/14.2” moved. Official wording (upstream Oct 2026): the 5 minutes are **not training data and not a tuning set** — [RULES.md](../RULES.md), [EVALUATION.md](../EVALUATION.md), [FAQ.md](../FAQ.md). See also [RESULTS.md](RESULTS.md).
 
 ---
 
@@ -71,7 +86,7 @@ Public 5-minute GT (~17 possessions, mean ~14.2 s) is for **pipeline sanity**, n
 
 - Match assets live under `data/` — **do not commit** them; do not redistribute.
 - **Do not** upload / paste into cloud Cursor (or other cloud LLMs): video, ATD dumps, frame crops, GT label sequences, or any extracts.
-- **Do** share in chat: macroF1, spellF1, poss count, mean duration, short notes (“too many flickers”).
+- **Do** share in chat: own poss count / mean duration / short structure notes; metrics from a one-off pipeline log if needed — never as a tuning target.
 - Beginner workflow: [BEGINNER.md](BEGINNER.md).
 
 ---
@@ -92,8 +107,8 @@ Statuses: `todo` | `doing` | `blocked` | `done`
 
 | Who | Posts |
 |-----|--------|
-| **B** | Latest line in [RESULTS.md](RESULTS.md) (or “no new CSV today”) |
-| **E1** | Next experiment / what they will try |
+| **B** | Latest line in [RESULTS.md](RESULTS.md) (or “no new CSV today”) — log only, do not push keep/drop from the board |
+| **E1** | Next change + **rule / physics / external-data citation** (not “raise spellF1”) |
 | **E2** | Blockers / infra status |
 
-Weekend: E1+E2 pair on modeling; B joins for validate/score + doc writing.
+Weekend: E1+E2 pair on modeling; B joins for validate + one pipeline log + doc writing.

@@ -2,15 +2,19 @@
 
 **Metrics only** — no match coordinates, no GT label dumps, no video.
 
-Public 5-minute GT ballpark (sanity, not leaderboard): ~**17** possessions, mean ~**14.2** s on the public window. Ranking uses private full-match GT.
+### Active baseline (Nov 2026 clarification)
 
-How to fill: run `python evaluation/run_evaluation.py`, then add a row. See [BEGINNER.md](BEGINNER.md).
+- **Forward path:** restored **`sm_v1`** → compliant **`sm_v1_1`** → **`sm_v1_2`** → **`sm_v1_3`** (rule/physics citations only).
+- **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process.
+- Public scorer: **pipeline log only**. Keep? notes must cite **challenge rule / ATD physics / licensed external data** — never “spellF1 went up.”
+
+How to fill: validate; optionally run `python evaluation/run_evaluation.py` once to log; add a row. See [BEGINNER.md](BEGINNER.md).
 
 ---
 
 ## Score table
 
-Scored **2026-10-24** against public GT via `.venv/bin/python evaluation/run_evaluation.py` (T10). Baselines regenerated the same day with `starter/baseline.py` (T11).
+Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, then restore / compliant line.
 
 | Date | File | Owner | macroF1 | spellF1 | poss | mean_dur_s | Notes |
 |------|------|-------|---------|---------|------|------------|-------|
@@ -29,10 +33,14 @@ Scored **2026-10-24** against public GT via `.venv/bin/python evaluation/run_eva
 | 2026-10-28 | sm_v1_8 | E1 | 0.6178 | 0.3130 | 29 | 8.9 | T24 merge + no phase votes; macro down |
 | 2026-10-29 | sm_v1_9 | E1 | 0.6341 | 0.4205 | 22 | 11.9 | Fill short D <50f; beats public smooth50 |
 | 2026-10-29 | sm_v1_10 | E1 | 0.6406 | 0.3905 | 25 | 10.4 | + restart reset after D≥50f; spell down vs v1.9 |
-| 2026-10-29 | sm_v2 | E1 | 0.6397 | 0.4649 | 20 | 13.1 | min_spell=50 sandwich + short-X fill; beats v1.9 |
+| 2026-10-29 | sm_v2 | E1 | 0.6397 | 0.4649 | 20 | 13.1 | ARCHIVE: min_spell=50 + short-X; public-GT era |
+| 2026-11-03 | sm_v1_restore | E1 | 0.5131 | 0.3000 | 27 | 8.8 | Bit-identical to archived sm_v1; clarification restore |
+| 2026-11-03 | sm_v1_1_compliant | E1 | 0.6051 | 0.3111 | 28 | 9.3 | Compliant sm_v1_1 defaults; pipeline log only (not a keep driver) |
+| 2026-11-03 | sm_v1_2_compliant | E1 | 0.6065 | 0.3111 | 28 | 9.3 | Compliant sm_v1_2; pipeline log only (not a keep driver) |
+| 2026-11-03 | sm_v1_3_compliant | E1 | 0.6063 | 0.3022 | 28 | 9.3 | Compliant sm_v1_3 cluster majority; ≠ Oct archive sm_v1_3; log only |
 | | | | | | | | |
 
-Add a new blank row for every model CSV (T30).
+Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.
 
 ---
 
@@ -54,12 +62,17 @@ Add a new blank row for every model CSV (T30).
 | 2026-10-28 | T24 code: sandwich-only `_merge_short_spells`; `--restart-control-frames` / `--restart-window-frames` (default window=0). `sm_v1_6`–`sm_v1_8`. |
 | 2026-10-29 | Short-D fill: `_fill_short_dead` (`min_dead_frames=50`); CLI `--min-dead-frames`. Post-stoppage reset CLI `--restart-reset-dead-frames` / `--restart-establish-frames` (default reset=0). `sm_v1_9` / `sm_v1_10`. |
 | 2026-10-29 | `DEFAULT_MIN_SPELL_FRAMES=50` + `_fill_short_abstain`; `sm_v2.csv` (VERSION 2.0). |
+| 2026-11-03 | Organiser clarification adopted: no GT/video parameter tuning. Code restored to sm_v1 (`sm_v1_restore.csv` == `sm_v1.csv`). |
+| 2026-11-03 | Merged upstream `c073f29` + `f8f2629`: public 5 min not training/tuning; no hand labels on this game; external data = other games only. |
+| 2026-11-03 | Compliant sm_v1_1 defaults shipped; `sm_v1_1_compliant.csv`. Local checks: graded X 29754→237; X-after-D 151→0; graded D↑ (edge heuristics). |
+| 2026-11-03 | Compliant sm_v1_2: establish-without-X + min_spell 18; `sm_v1_2_compliant.csv`. Local vs v1_1: graded X 237→177; short&lt;12f 4→6; mean dur/n_spells flat; X-after-D 0. |
+| 2026-11-03 | Compliant sm_v1_3 (T25): contested majority-near-ball; `sm_v1_3_compliant.csv`. Local vs v1_2: structure flat (X 177, n_spells 428, short&lt;12f 6); ~1.7% frames differ (H/A rebalance). ≠ Oct archive sm_v1_3. |
 
 ---
 
 ## Experiment notes (E1 / E2)
 
-Short bullets only — why a change was kept or dropped. Prefer poss/dur and failure modes over chasing public spellF1 alone.
+Short bullets only — why a change was kept or dropped. **Keep? must cite challenge rule / physics / external data.** Do not keep because public spellF1 moved.
 
 | Date | Change | Keep? | Why |
 |------|--------|-------|-----|
@@ -74,4 +87,8 @@ Short bullets only — why a change was kept or dropped. Prefer poss/dur and fai
 | 2026-10-28 | T24 `--no-phase-votes` → sm_v1_8 | **no** | spellF1 tied 0.313; macro 0.627→0.618. Keep phase votes on. |
 | 2026-10-29 | Fill short D <50f → sm_v1_9 | **yes (default)** | vs sm_v1_4: spellF1 0.313→0.421, macro 0.627→0.634, matched@0.5 8→9, poss 29→22 / dur 8.9→11.9. Beats public smooth50 (0.326). FULL-match sanity poss 449→366 / mean dur 11.1→13.8 s (plausible). Physical reason: GT stoppages ≥138f; SM short D blips are tracking noise splitting spells. Cutoff 25≈50 in prior probe (stable). |
 | 2026-10-29 | Restart reset after D≥50f → sm_v1_10 | **no** (reset default stays 0) | vs sm_v1_9: spellF1 0.421→0.391; matched@0.5 tied 9 but spur 13→16; abstain 15→144; FULL poss 366→418 / dur 13.8→11.5. Macro up slightly; spell/structure worse. Keep `--restart-reset-dead-frames` behind flag. |
-| 2026-10-29 | Sandwich min_spell 12→50 + short graded-X fill → sm_v2 | **yes (default)** | vs sm_v1_9: spellF1 0.421→0.465, macro 0.634→0.640, poss 22→20 / dur 11.9→13.1 (closer to GT 17/14.2), spur 13→11, abstain 15→0, matched@0.5 held at 9. Gates passed. Stable with merge 50–75 in prior probe; merge≥100 banned. |
+| 2026-10-29 | Sandwich min_spell 12→50 + short graded-X fill → sm_v2 | ARCHIVE (not forward path) | Public-GT era keep. Superseded by Nov clarification restore to sm_v1. |
+| 2026-11-03 | Restore defaults to sm_v1 (15/3.0/0.02/8; no ST priors; no edge D knobs) | **yes (active baseline)** | Rule-motivated T21; bit-identical to archived sm_v1.csv. Clarification: stop GT keep/drop. |
+| 2026-11-03 | Compliant sm_v1_1 (control=25, min_spell=12, edge D, freeze last_live on D) | yes (then superseded by sm_v1_2) | Challenge: controlled switch ~1s; touch≠turnover; dead near edge; keep last through stoppage. Local: graded X 29754→237; X-after-D 151→0. Pipeline numbers logged once — not used to keep/drop. |
+| 2026-11-03 | Compliant sm_v1_2: establish-without-X + min_spell 12→18 | yes (then superseded by sm_v1_3) | CHALLENGE: live ball → H/A (not X while establishing); touch ≠ turnover (milder merge ~0.72 s). Local vs sm_v1_1: graded X 237→177; X-after-D 0; short&lt;12f 4→6 (near); mean dur 11.72→11.73; n_spells 428 flat. Pipeline log only — not used to keep/drop. |
+| 2026-11-03 | Compliant sm_v1_3: contested majority near ball (radius 3 m, contest ≤1 m) | **yes (default)** | Physics: team presence in control circle, not only nearest track; override nearest only when duel contested. Local vs sm_v1_2: graded X/n_spells/short islands flat; short&lt;25f 25→24; ~1.7% frames H↔A. Pipeline log only — not used to keep/drop. Rollback: `--no-majority-near`. |

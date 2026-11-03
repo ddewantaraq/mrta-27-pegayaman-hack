@@ -38,7 +38,10 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 | T21 | State machine v1: hold last team; control hysteresis; basic dead-ball | E1 | 2 | done | Nov 2 | Labels H/A/D/X; fewer possessions than `baseline_raw` on public window | T20 |
 | T22 | One-command predict script → valid 199319-row CSV | E2 | 2 | done | Nov 2 | Documented command writes CSV; `validate_submission.py` passes | T20 |
 | T23 | Smart Tagging soft priors (set pieces → D / restart; phases as weak votes) | E1 | 3 | done | Nov 7 | Priors wired; do **not** copy phase intervals as labels; logged in RESULTS | T21, T22 |
-| T24 | Tune via failure modes + possession-count sanity (not public spellF1 alone) | E1 | 3 | done | Nov 9 | Tuning notes in RESULTS; avoid ranking models only on public 5 min | T23 |
+| T24 | Rule/physics upgrades + local structure checks (no GT-driven keep/drop) | E1 | 3 | done | Nov 9 | Compliant sm_v1_1 shipped; RESULTS cites challenge rules; local non-GT checks; no public-board selection | T21, T22 |
+| T25 | Cluster / majority near ball (contested override of nearest) | E1 | 3–4 | done | Nov 3 | Features `n_near_*` + `majority_team`; SM contested cand; `sm_v1_3_compliant`; local vs sm_v1_2 flat; Keep? cites team presence | T24 |
+| T26 | Soft Smart Tagging redesign (capped set-piece D; weak restart prior) | E1 | 4 | todo | Nov 12 | Rule-only priors; not default until local structure OK; no GT caps | T25 |
+| T27 | Pass-like same-team travel (consecutive same-team contacts) | E1 | 4 | todo | after T26 | Physics citation + local structure; no public-floor keep/drop | T26 |
 
 ---
 
@@ -46,8 +49,8 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T30 | After every model CSV: validate + score + log RESULTS | B | 2–4 | todo | ongoing | Every new CSV has a RESULTS row the same day | T10, T22 |
-| T31 | Compare poss / mean dur to public GT (~17 poss, ~14.2 s) | B | 2–3 | todo | Nov 2 | RESULTS notes include poss/dur vs GT ballpark; E1 interprets | T30 |
+| T30 | After every model CSV: validate + one pipeline score + log RESULTS | B | 2–4 | todo | ongoing | Every new CSV has a RESULTS row the same day; score is **log only**, not a keep/drop signal | T10, T22 |
+| T31 | Log own poss / mean dur (structure sanity) | B | 2–3 | todo | Nov 2 | RESULTS notes own poss/dur; **do not** treat GT 17/14.2 as a tuning target | T30 |
 
 ---
 

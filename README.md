@@ -96,8 +96,9 @@ It takes two seconds and it is the single most common way a good entry scores no
 
 ## Our team model (reproduce)
 
-This fork includes a possession **state machine** (ATD features + Smart Tagging soft priors + short
-dead-ball cleanup). Defaults match our best logged public run (`sm_v2`).
+This fork includes a possession **state machine** over tactical ATD.
+**Active defaults** follow compliant **`sm_v1_3`** (contested majority-near-ball on sm_v1_2; rule/physics path after `sm_v1` restore).
+We do **not** tune parameters on the public possession ground truth (organiser clarification).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # once; keep activated
@@ -107,10 +108,9 @@ bash predict_v1.sh          # Mac / Linux / Git Bash
 # predict_v1.bat            # Windows CMD
 ```
 
-`predict_v1.sh` picks `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`
+`predict_v1.sh` picks `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`.
 
-That writes the next `evaluation/results/sm_v*.csv`, validates it, and prints the public scoreboard.
-Expected ballpark vs public GT: spellF1 ~**0.46**, macroF1 ~**0.64** (see team log).
+That writes the next `evaluation/results/sm_v*.csv`, validates it, and may print the public scoreboard as a **pipeline log** only.
 
 **Full how-to, flags, and result notes:** **[team/README.md](team/README.md)** ·  
 Rules as implemented: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) ·  

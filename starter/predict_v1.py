@@ -4,13 +4,16 @@ The one command that also validates and scores is predict_v1.bat (Command Prompt
 or predict_v1.sh (Mac Terminal, or Git Bash on Windows). This file is the predict step.
 
 By default writes the next auto-incremented file under evaluation/results/:
-  sm_v1.csv (1.0), sm_v1_1.csv … sm_v1_10.csv, then sm_v2_0.csv, …
+  sm_v1.csv (1.0), sm_v1_1.csv … sm_v1_10.csv, then sm_v2.csv, …
 Pass --out PATH to force a path and skip auto-versioning.
 
-Needs the match bundle in ./data or MTAH_DATA_DIR. Defaults match kept sm_v2 path:
-control=25, min_spell=50 (sandwich merge), set-piece cap=50, min_dead_frames=50,
-restart_window=0, restart_reset_dead_frames=0. Smart Tagging soft priors on by default;
-pass --no-smart-tagging to disable. --full-set-piece-dead restores T23 full-span D.
+Needs the match bundle in ./data or MTAH_DATA_DIR.
+Defaults = compliant sm_v1_3 (control=25, min_spell=18, edge dead-ball on,
+keep_last_live_on_dead, establish-without-X, contested majority-near-ball).
+Chosen from challenge/physics rules — not public-GT score chasing.
+Restored sm_v1: --control-frames 15 --min-spell-frames 8
+--missing-near-edge-frames 0 --still-near-edge-frames 0
+--clear-last-live-on-dead --no-majority-near.
 """
 
 from __future__ import print_function
@@ -28,25 +31,22 @@ sys.path.insert(0, ROOT)
 sys.path.insert(0, HERE)
 
 from games import GAME  # noqa: E402
-from features import extract_features, summarize  # noqa: E402
-from smart_priors import (  # noqa: E402
-    DEFAULT_SET_PIECE_DEAD_CAP_FRAMES,
-    build_smart_priors,
-    summarize_priors,
+from features import (  # noqa: E402
+    DEFAULT_CLUSTER_RADIUS_M,
+    extract_features,
+    summarize,
 )
 from state_machine import (  # noqa: E402
+    DEFAULT_CONTEST_DIST_M,
     DEFAULT_CONTROL_DIST_M,
     DEFAULT_CONTROL_FRAMES,
-    DEFAULT_MIN_DEAD_FRAMES,
+    DEFAULT_KEEP_LAST_LIVE_ON_DEAD,
     DEFAULT_MIN_SPELL_FRAMES,
     DEFAULT_MISSING_NEAR_EDGE_FRAMES,
     DEFAULT_OUT_MARGIN,
-    DEFAULT_RESTART_CONTROL_FRAMES,
-    DEFAULT_RESTART_ESTABLISH_FRAMES,
-    DEFAULT_RESTART_RESET_DEAD_FRAMES,
-    DEFAULT_RESTART_WINDOW_FRAMES,
     DEFAULT_STILL_NEAR_EDGE_FRAMES,
     DEFAULT_STILL_SPEED_M,
+    DEFAULT_USE_MAJORITY_NEAR,
     label_possession,
     params_dict,
 )
@@ -54,7 +54,6 @@ from state_machine import (  # noqa: E402
 RESULTS_DIR = os.path.join(ROOT, "evaluation", "results")
 MAX_MINOR = 10
 
-# sm_v1.csv -> 1.0; sm_v1_1.csv -> 1.1; sm_v2_0.csv -> 2.0
 _RE_MAJOR_ONLY = re.compile(r"^sm_v(\d+)\.csv$", re.IGNORECASE)
 _RE_MAJOR_MINOR = re.compile(r"^sm_v(\d+)_(\d+)\.csv$", re.IGNORECASE)
 
@@ -141,52 +140,38 @@ def main():
                         default=DEFAULT_STILL_NEAR_EDGE_FRAMES)
     parser.add_argument("--still-speed-m", type=float, default=DEFAULT_STILL_SPEED_M)
     parser.add_argument(
-        "--restart-control-frames", type=int, default=DEFAULT_RESTART_CONTROL_FRAMES,
-        help="opposing-switch frames required soon after leaving D (default {})".format(
-            DEFAULT_RESTART_CONTROL_FRAMES
-        ),
+        "--keep-last-live-on-dead",
+        dest="keep_last_live_on_dead",
+        action="store_true",
+        default=DEFAULT_KEEP_LAST_LIVE_ON_DEAD,
+        help="freeze last_live through D (sm_v1_1 rule); default off for sm_v1",
     )
     parser.add_argument(
-        "--restart-window-frames", type=int, default=DEFAULT_RESTART_WINDOW_FRAMES,
-        help="live frames after D where restart_control applies (default {}; 0=off)".format(
-            DEFAULT_RESTART_WINDOW_FRAMES
-        ),
+        "--clear-last-live-on-dead",
+        dest="keep_last_live_on_dead",
+        action="store_false",
+        help="clear last_live on D (sm_v1 behaviour)",
     )
     parser.add_argument(
-        "--min-dead-frames", type=int, default=DEFAULT_MIN_DEAD_FRAMES,
-        help="fill D islands shorter than N when same team on both sides (default {}; 0=off)".format(
-            DEFAULT_MIN_DEAD_FRAMES
-        ),
+        "--cluster-radius-m", type=float, default=DEFAULT_CLUSTER_RADIUS_M,
+        help="metres: players inside this radius count toward majority (default 3.0)",
     )
     parser.add_argument(
-        "--restart-reset-dead-frames", type=int, default=DEFAULT_RESTART_RESET_DEAD_FRAMES,
-        help="after D stretch >= N, clear last_live and re-establish (default {}; 0=off)".format(
-            DEFAULT_RESTART_RESET_DEAD_FRAMES
-        ),
+        "--contest-dist-m", type=float, default=DEFAULT_CONTEST_DIST_M,
+        help="metres: |d_home-d_away| <= this allows majority to override nearest",
     )
     parser.add_argument(
-        "--restart-establish-frames", type=int, default=DEFAULT_RESTART_ESTABLISH_FRAMES,
-        help="frames to establish possession after a long-D reset (default {})".format(
-            DEFAULT_RESTART_ESTABLISH_FRAMES
-        ),
+        "--majority-near",
+        dest="use_majority_near",
+        action="store_true",
+        default=DEFAULT_USE_MAJORITY_NEAR,
+        help="contested majority-near-ball override (sm_v1_3 default on)",
     )
     parser.add_argument(
-        "--no-smart-tagging", action="store_true",
-        help="disable Smart Tagging soft priors",
-    )
-    parser.add_argument(
-        "--set-piece-cap-frames", type=int, default=DEFAULT_SET_PIECE_DEAD_CAP_FRAMES,
-        help="mark only first N frames of each SET PIECES tag as D (default {})".format(
-            DEFAULT_SET_PIECE_DEAD_CAP_FRAMES
-        ),
-    )
-    parser.add_argument(
-        "--full-set-piece-dead", action="store_true",
-        help="legacy T23: force D for the full SET PIECES tagged span",
-    )
-    parser.add_argument(
-        "--no-phase-votes", action="store_true",
-        help="disable weak phase-team votes (set-piece prior still applies)",
+        "--no-majority-near",
+        dest="use_majority_near",
+        action="store_false",
+        help="disable majority override; pure nearest (sm_v1_2 cand)",
     )
     args = parser.parse_args()
 
@@ -199,22 +184,9 @@ def main():
         version = parse_sm_version(out_path)
 
     print("T20 extract_features ...")
-    features = extract_features(game=args.game)
+    features = extract_features(
+        game=args.game, cluster_radius_m=args.cluster_radius_m)
     summarize(features)
-
-    smart_priors = None
-    if not args.no_smart_tagging:
-        cap = None if args.full_set_piece_dead else args.set_piece_cap_frames
-        print("smart_priors ...")
-        smart_priors = build_smart_priors(
-            n_frames=features["n_frames"],
-            game=args.game,
-            set_piece_dead_cap_frames=cap,
-            use_phase_votes=not args.no_phase_votes,
-        )
-        summarize_priors(smart_priors)
-    else:
-        print("smart_priors: disabled (--no-smart-tagging)")
 
     params = params_dict(
         control_frames=args.control_frames,
@@ -224,17 +196,12 @@ def main():
         missing_near_edge_frames=args.missing_near_edge_frames,
         still_near_edge_frames=args.still_near_edge_frames,
         still_speed_m=args.still_speed_m,
-        restart_control_frames=args.restart_control_frames,
-        restart_window_frames=args.restart_window_frames,
-        min_dead_frames=args.min_dead_frames,
-        restart_reset_dead_frames=args.restart_reset_dead_frames,
-        restart_establish_frames=args.restart_establish_frames,
+        keep_last_live_on_dead=args.keep_last_live_on_dead,
+        use_majority_near=args.use_majority_near,
+        contest_dist_m=args.contest_dist_m,
     )
-    params["smart_tagging"] = smart_priors is not None
-    if smart_priors is not None:
-        params["set_piece_dead_cap_frames"] = smart_priors.get("set_piece_dead_cap_frames")
-        params["use_phase_votes"] = smart_priors.get("use_phase_votes")
     print("state_machine params: {}".format(params))
+    print("cluster_radius_m: {}".format(args.cluster_radius_m))
 
     labels = label_possession(
         features,
@@ -246,12 +213,9 @@ def main():
         missing_near_edge_frames=args.missing_near_edge_frames,
         still_near_edge_frames=args.still_near_edge_frames,
         still_speed_m=args.still_speed_m,
-        restart_control_frames=args.restart_control_frames,
-        restart_window_frames=args.restart_window_frames,
-        min_dead_frames=args.min_dead_frames,
-        restart_reset_dead_frames=args.restart_reset_dead_frames,
-        restart_establish_frames=args.restart_establish_frames,
-        smart_priors=smart_priors,
+        keep_last_live_on_dead=args.keep_last_live_on_dead,
+        use_majority_near=args.use_majority_near,
+        contest_dist_m=args.contest_dist_m,
     )
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
