@@ -80,6 +80,16 @@ Takes precedence over earlier docs/emails. **Not allowed:** checking output agai
 
 Public 5-minute GT: **one-off pipeline check** (validate + scorer runs) only. **Forbidden:** iterative keep/drop because public spellF1 / macro / matched / “closer to GT 17/14.2” moved. Official wording (upstream Oct 2026): the 5 minutes are **not training data and not a tuning set** — [RULES.md](../RULES.md), [EVALUATION.md](../EVALUATION.md), [FAQ.md](../FAQ.md). See also [RESULTS.md](RESULTS.md).
 
+### How we assess (different from the Oct public-GT era)
+
+Keep/drop a change using **rule/physics citation** plus **local non-GT CSV structure** — not public spellF1.
+
+1. **Vs prior compliant CSV** (e.g. `sm_v1_2_compliant` → `sm_v1_3_compliant`): graded X, X-after-D, short H/A islands (&lt;12f / &lt;25f), n_spells, mean spell duration. Prefer flat or better structure (fewer short islands / not exploding spell count).
+2. **Vs `evaluation/results/baseline_smooth50.csv`** as the **structure reference** (same metrics on graded halves). Prefer fewer short islands and longer mean spell duration than smooth50 where possible — aligned with the published full-match floor story, without using possession GT. Graded X may still be &gt; 0 (smooth50 never abstains); that alone is not a fail.
+3. **Public scorer once** → RESULTS log only. Never the keep driver.
+
+Oct process (iterate until public board / GT 17 poss moved) is archived. See [RESULTS.md](RESULTS.md).
+
 ---
 
 ## Data and LLM rules

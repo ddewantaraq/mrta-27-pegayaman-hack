@@ -17,6 +17,7 @@ _Owner: B · Reviewer: E1_ — **T13r signed off 2026-10-24**
 - **macroF1** (tie-break / per-frame): Mean of the per-class F1 scores for `H`, `A`, and `D` on every graded frame. Measures “right letter, right frame.” Useful diagnostic; reported beside spellF1 and breaks ties only.
 - **Organiser clarification (Nov 2026):** parameters must **not** be trained, fitted, or calibrated on the possession ground truth or the provided video. The public 5-minute GT is for **pipeline verification** only (file shape, scorer runs). We set knobs from challenge rules / ATD physics (or licensed external data), not from public spellF1 keep/drop.
 - Why public spellF1 alone was always a weak private proxy: smooth125 can lead the public window while losing on the full match (published floor smooth50 spellF1 **0.2433**). That is a second reason not to chase the public board — the first is the clarification itself.
+- **How we assess (vs Oct public-GT keep/drop):** local CSV structure vs the prior compliant submission **and** vs shipped `baseline_smooth50.csv` (short H/A islands, mean spell duration, n_spells, graded X / X-after-D). Prefer fewer short islands and longer mean duration than smooth50 where possible — a GT-free proxy for the full-match floor story. Public board = log only. Detail: team [TEAM.md](TEAM.md) § How we assess.
 
 Illustration (pipeline sanity, T10): raw invents far more possessions than a coach would count → structure matters more than frame accuracy.
 

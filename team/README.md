@@ -79,7 +79,7 @@ python evaluation/run_evaluation.py
 
 **Validate:** `OK` and `199319 rows`.
 
-**Structure (no GT):** own graded poss count / mean duration / graded `X` should be plausible vs raw flicker (see RESULTS). Public scoreboard numbers are for the RESULTS log only — not a success gate.
+**Structure (no GT):** compare graded-half metrics (short H/A islands, mean spell dur, n_spells, graded X, X-after-D) to the **previous compliant CSV** and to **`evaluation/results/baseline_smooth50.csv`** (structure reference — prefer fewer short islands / longer mean dur than smooth50). Public scoreboard numbers are for the RESULTS log only — not a success gate. See [TEAM.md](TEAM.md) § How we assess.
 
 Full table: [RESULTS.md](RESULTS.md).
 

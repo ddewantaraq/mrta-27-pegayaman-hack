@@ -6,9 +6,9 @@
 
 - **Forward path:** restored **`sm_v1`** → compliant **`sm_v1_1`** → **`sm_v1_2`** → **`sm_v1_3`** (rule/physics citations only).
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process.
-- Public scorer: **pipeline log only**. Keep? notes must cite **challenge rule / ATD physics / licensed external data** — never “spellF1 went up.”
+- **How we assess (not Oct):** local non-GT structure vs (1) the previous compliant CSV and (2) **`evaluation/results/baseline_smooth50.csv`** — graded X, X-after-D, short H/A islands, n_spells, mean spell dur. Prefer fewer short islands / longer mean dur than smooth50 where possible. Public scorer: **pipeline log only**. Keep? notes must cite **challenge rule / ATD physics / licensed external data** — never “spellF1 went up.” Full ritual: [TEAM.md](TEAM.md) § How we assess.
 
-How to fill: validate; optionally run `python evaluation/run_evaluation.py` once to log; add a row. See [BEGINNER.md](BEGINNER.md).
+How to fill: validate; run local structure vs prior + `baseline_smooth50.csv`; optionally run the public scorer once to log; add a row. See [BEGINNER.md](BEGINNER.md).
 
 ---
 
