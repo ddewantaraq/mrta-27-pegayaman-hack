@@ -26,7 +26,7 @@ Parent board: [TASKS.md](TASKS.md) · Roles: [TEAM.md](TEAM.md)
 
 | Date | Focus |
 |------|--------|
-| Mon 10 – Wed 12 | **No** public-board chasing. Compliant levers in order: #1 cluster majority → #2 Soft ST (see TEAM.md). Local structure gates only |
+| Mon 10 – Wed 12 | **No** public-board chasing. Compliant levers: majority + missing-ball H/A done (`sm_v1_5`); next pass-like (see TEAM.md). Local structure vs sm_v1_3 + smooth50 |
 | **Thu 13** | **Code freeze (T42)** — regenerate final CSV; validate; hash/bytes match on second run |
 | Fri 14 | Finalize tech doc (T41); B proofreads; dry-run Google Form field list |
 | **Sat 15** | **Soft submit (T43)** by 23:59 GMT+7 — CSV + repo URL + doc |
@@ -39,7 +39,7 @@ Nov 16–17: form/outage emergencies only. No new models.
 
 Week 4 / project ship is done when **all** are true:
 
-1. Code frozen on the **compliant** line (`sm_v1_2` / approved `sm_v1_3+`); two regenerations identical (**T42**).
+1. Code frozen on the **compliant** line (`sm_v1_4` / approved prior); two regenerations identical (**T42**).
 2. Tech doc has all six sections from SUBMISSION.md and states clarification compliance (**T41**).
 3. Soft submit completed by **15 Nov 23:59 GMT+7** (**T43**): possession CSV, public repo URL, technical document.
 4. Upload file was validated with `validate_submission.py` on the **exact** file sent.

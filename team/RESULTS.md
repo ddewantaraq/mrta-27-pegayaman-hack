@@ -4,9 +4,9 @@
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** restored **`sm_v1`** → compliant **`sm_v1_1`** → **`sm_v1_2`** → **`sm_v1_3`** (rule/physics citations only).
+- **Forward path:** restored **`sm_v1`** → compliant **`sm_v1_1`** → **`sm_v1_2`** → **`sm_v1_3`** → **`sm_v1_5`** (rule/physics + Metrica external missing-ball rules). **`sm_v1_4`** soft ST is archived (not the structure reference).
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process.
-- **How we assess (not Oct):** local non-GT structure vs (1) the previous compliant CSV and (2) **`evaluation/results/baseline_smooth50.csv`** — graded X, X-after-D, short H/A islands, n_spells, mean spell dur. Prefer fewer short islands / longer mean dur than smooth50 where possible. Public scorer: **pipeline log only**. Keep? notes must cite **challenge rule / ATD physics / licensed external data** — never “spellF1 went up.” Full ritual: [TEAM.md](TEAM.md) § How we assess.
+- **How we assess (not Oct):** local non-GT structure vs (1) **`sm_v1_3_compliant.csv`** and (2) **`evaluation/results/baseline_smooth50.csv`**; missing-ball H/A correctness on Metrica sample games only. Public scorer: **pipeline log only**. Keep? notes must cite **challenge rule / ATD physics / licensed external data** — never “spellF1 went up.” Full ritual: [TEAM.md](TEAM.md) § How we assess.
 
 How to fill: validate; run local structure vs prior + `baseline_smooth50.csv`; optionally run the public scorer once to log; add a row. See [BEGINNER.md](BEGINNER.md).
 
@@ -38,6 +38,8 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-03 | sm_v1_1_compliant | E1 | 0.6051 | 0.3111 | 28 | 9.3 | Compliant sm_v1_1 defaults; pipeline log only (not a keep driver) |
 | 2026-11-03 | sm_v1_2_compliant | E1 | 0.6065 | 0.3111 | 28 | 9.3 | Compliant sm_v1_2; pipeline log only (not a keep driver) |
 | 2026-11-03 | sm_v1_3_compliant | E1 | 0.6063 | 0.3022 | 28 | 9.3 | Compliant sm_v1_3 cluster majority; ≠ Oct archive sm_v1_3; log only |
+| 2026-11-07 | sm_v1_4_compliant | E1 | 0.6189 | 0.3043 | 29 | 8.9 | Compliant soft ST; ≠ Oct archive sm_v1_4; log only; later archived vs sm_v1_3 structure |
+| 2026-11-07 | sm_v1_5_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Compliant missing-ball H/A (Metrica external); ≠ Oct archive sm_v1_5; log only |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.
@@ -67,6 +69,8 @@ Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are log
 | 2026-11-03 | Compliant sm_v1_1 defaults shipped; `sm_v1_1_compliant.csv`. Local checks: graded X 29754→237; X-after-D 151→0; graded D↑ (edge heuristics). |
 | 2026-11-03 | Compliant sm_v1_2: establish-without-X + min_spell 18; `sm_v1_2_compliant.csv`. Local vs v1_1: graded X 237→177; short&lt;12f 4→6; mean dur/n_spells flat; X-after-D 0. |
 | 2026-11-03 | Compliant sm_v1_3 (T25): contested majority-near-ball; `sm_v1_3_compliant.csv`. Local vs v1_2: structure flat (X 177, n_spells 428, short&lt;12f 6); ~1.7% frames differ (H/A rebalance). ≠ Oct archive sm_v1_3. |
+| 2026-11-07 | Compliant sm_v1_4 (T26): missing-aware soft SET PIECES→D; `sm_v1_4_compliant.csv`. Explained missing (D∩soft ST prior) 10.7%→21.7% of graded missing; graded D↑; n_spells 428→456; mean dur 11.73→10.33; short&lt;12f 6→10. ≠ Oct archive sm_v1_4. |
+| 2026-11-07 | Compliant sm_v1_5 (T28): backdate-switch + gap-bridge mid on sm_v1_3 base; Smart Tagging off. External Metrica: mean spellF1 0.314→0.370, hidden-frame team acc 0.505→0.510; LOGO both games. Local vs sm_v1_3: n_spells 428→421; mean dur 11.73→11.92; short&lt;25f 24→16; X/D flat. ≠ Oct archive sm_v1_5. |
 
 ---
 
@@ -91,4 +95,6 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-03 | Restore defaults to sm_v1 (15/3.0/0.02/8; no ST priors; no edge D knobs) | **yes (active baseline)** | Rule-motivated T21; bit-identical to archived sm_v1.csv. Clarification: stop GT keep/drop. |
 | 2026-11-03 | Compliant sm_v1_1 (control=25, min_spell=12, edge D, freeze last_live on D) | yes (then superseded by sm_v1_2) | Challenge: controlled switch ~1s; touch≠turnover; dead near edge; keep last through stoppage. Local: graded X 29754→237; X-after-D 151→0. Pipeline numbers logged once — not used to keep/drop. |
 | 2026-11-03 | Compliant sm_v1_2: establish-without-X + min_spell 12→18 | yes (then superseded by sm_v1_3) | CHALLENGE: live ball → H/A (not X while establishing); touch ≠ turnover (milder merge ~0.72 s). Local vs sm_v1_1: graded X 237→177; X-after-D 0; short&lt;12f 4→6 (near); mean dur 11.72→11.73; n_spells 428 flat. Pipeline log only — not used to keep/drop. |
-| 2026-11-03 | Compliant sm_v1_3: contested majority near ball (radius 3 m, contest ≤1 m) | **yes (default)** | Physics: team presence in control circle, not only nearest track; override nearest only when duel contested. Local vs sm_v1_2: graded X/n_spells/short islands flat; short&lt;25f 25→24; ~1.7% frames H↔A. Pipeline log only — not used to keep/drop. Rollback: `--no-majority-near`. |
+| 2026-11-03 | Compliant sm_v1_3: contested majority near ball (radius 3 m, contest ≤1 m) | yes (structure reference; then sm_v1_5) | Physics: team presence in control circle, not only nearest track; override nearest only when duel contested. Local vs sm_v1_2: graded X/n_spells/short islands flat; short&lt;25f 25→24; ~1.7% frames H↔A. Pipeline log only — not used to keep/drop. Rollback: `--no-majority-near`. |
+| 2026-11-07 | Compliant sm_v1_4: missing-aware soft SET PIECES → D (cap 50f live; full tag while ball missing; no phase votes) | archived (not default) | Challenge: set piece = dead. Local vs sm_v1_3: explained missing ↑ but mean dur 11.73→10.33 and short islands ↑ — worse structure than sm_v1_3. Kept reachable via `--smart-tagging`. |
+| 2026-11-07 | Compliant sm_v1_5: backdate-switch + gap-bridge mid (long-gap D dropped) | **yes (default)** | Link & Hoernig 2017: switch at first opposing control; TBP continues through void phases then places turnover in the dark when teams disagree across a gap. Chosen on Metrica Sample_Game_1/2 (event-derived GT + synthetic dropout) vs sm_v1_3; LOGO both games; long-gap→D hurt hidden-frame acc. Local vs sm_v1_3: structure flat/better (n_sp 421, mean 11.92, s25 16); ≪ smooth50. Rollback: `--no-backdate-switch --gap-bridge off`. |

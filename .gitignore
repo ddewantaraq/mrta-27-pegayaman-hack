@@ -32,6 +32,9 @@ evaluation/scoreboard.csv
 data/*
 !data/README.md
 
+# External public datasets used for compliant validation (other games; not BAR-ATH).
+data_external/
+
 *.mp4
 *.gzip
 *.pl3container

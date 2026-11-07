@@ -52,6 +52,80 @@ def _parse_xyz(group):
     return float(group[:c1]), float(group[c1 + 1:c2]), float(group[c2 + 1:])
 
 
+def proximity_to_ball(player_xy_m, team_of_player, ball_xy_m, cluster_radius_m):
+    """Nearest / cluster stats for one frame.
+
+    player_xy_m: iterable of (x_m, y_m) or None for missing players.
+    team_of_player: parallel iterable of HOME/AWAY/NOBODY.
+    ball_xy_m: (x_m, y_m).
+    Returns dict with nearest_team, nearest_dist, min_dist_home, min_dist_away,
+    n_near_home, n_near_away, majority_team.
+    """
+    bx, by = ball_xy_m
+    r2 = float(cluster_radius_m) * float(cluster_radius_m)
+    best_d2 = None
+    best_team = NOBODY
+    d_home = None
+    d_away = None
+    nh = 0
+    na = 0
+    for xy, team in zip(player_xy_m, team_of_player):
+        if xy is None:
+            continue
+        px, py = xy
+        dx = px - bx
+        dy = py - by
+        d2 = dx * dx + dy * dy
+        dist = d2 ** 0.5
+        t = int(team)
+        if t == HOME:
+            if d_home is None or dist < d_home:
+                d_home = dist
+            if d2 <= r2:
+                nh += 1
+        elif t == AWAY:
+            if d_away is None or dist < d_away:
+                d_away = dist
+            if d2 <= r2:
+                na += 1
+        if best_d2 is None or d2 < best_d2:
+            best_d2 = d2
+            best_team = t
+    maj = NOBODY
+    if nh > na:
+        maj = HOME
+    elif na > nh:
+        maj = AWAY
+    return {
+        "nearest_team": best_team,
+        "nearest_dist": (best_d2 ** 0.5) if best_d2 is not None else np.nan,
+        "min_dist_home": d_home if d_home is not None else np.nan,
+        "min_dist_away": d_away if d_away is not None else np.nan,
+        "n_near_home": nh,
+        "n_near_away": na,
+        "majority_team": maj,
+    }
+
+
+def empty_feature_arrays(n_frames):
+    """Allocate the standard length-n feature arrays (NaN / False / NOBODY)."""
+    return {
+        "ball_present": np.zeros(n_frames, dtype=bool),
+        "ball_x_norm": np.full(n_frames, np.nan, dtype=np.float64),
+        "ball_y_norm": np.full(n_frames, np.nan, dtype=np.float64),
+        "ball_speed": np.full(n_frames, np.nan, dtype=np.float64),
+        "ball_x_m": np.full(n_frames, np.nan, dtype=np.float64),
+        "ball_y_m": np.full(n_frames, np.nan, dtype=np.float64),
+        "nearest_team": np.full(n_frames, NOBODY, dtype=np.int8),
+        "min_dist_home": np.full(n_frames, np.nan, dtype=np.float64),
+        "min_dist_away": np.full(n_frames, np.nan, dtype=np.float64),
+        "nearest_dist": np.full(n_frames, np.nan, dtype=np.float64),
+        "n_near_home": np.zeros(n_frames, dtype=np.int8),
+        "n_near_away": np.zeros(n_frames, dtype=np.int8),
+        "majority_team": np.full(n_frames, NOBODY, dtype=np.int8),
+    }
+
+
 def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_RADIUS_M):
     """Dict of length-n_frames arrays for the tactical ATD.
 
@@ -68,21 +142,21 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
     n_frames = source_frames("tactical", game)
     length, width = GAMES[game]["pitch"]
     team_of_track = team_of_each_track(meta_path)
-    r2 = float(cluster_radius_m) * float(cluster_radius_m)
 
-    ball_present = np.zeros(n_frames, dtype=bool)
-    ball_x_norm = np.full(n_frames, np.nan, dtype=np.float64)
-    ball_y_norm = np.full(n_frames, np.nan, dtype=np.float64)
-    ball_speed = np.full(n_frames, np.nan, dtype=np.float64)
-    ball_x_m = np.full(n_frames, np.nan, dtype=np.float64)
-    ball_y_m = np.full(n_frames, np.nan, dtype=np.float64)
-    nearest_team = np.full(n_frames, NOBODY, dtype=np.int8)
-    min_dist_home = np.full(n_frames, np.nan, dtype=np.float64)
-    min_dist_away = np.full(n_frames, np.nan, dtype=np.float64)
-    nearest_dist = np.full(n_frames, np.nan, dtype=np.float64)
-    n_near_home = np.zeros(n_frames, dtype=np.int8)
-    n_near_away = np.zeros(n_frames, dtype=np.int8)
-    majority_team = np.full(n_frames, NOBODY, dtype=np.int8)
+    arrays = empty_feature_arrays(n_frames)
+    ball_present = arrays["ball_present"]
+    ball_x_norm = arrays["ball_x_norm"]
+    ball_y_norm = arrays["ball_y_norm"]
+    ball_speed = arrays["ball_speed"]
+    ball_x_m = arrays["ball_x_m"]
+    ball_y_m = arrays["ball_y_m"]
+    nearest_team = arrays["nearest_team"]
+    min_dist_home = arrays["min_dist_home"]
+    min_dist_away = arrays["min_dist_away"]
+    nearest_dist = arrays["nearest_dist"]
+    n_near_home = arrays["n_near_home"]
+    n_near_away = arrays["n_near_away"]
+    majority_team = arrays["majority_team"]
 
     with open(raw_path) as handle:
         for line in handle:
@@ -107,49 +181,27 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
             ball_x_m[frame] = bx
             ball_y_m[frame] = by
 
-            best_d2 = None
-            best_team = NOBODY
-            d_home = None
-            d_away = None
-            nh = 0
-            na = 0
+            player_xy = []
+            teams = []
             for slot, group in enumerate(parts[1].split(GROUP_SEP)):
                 parsed = _parse_xyz(group)
                 if parsed is None:
+                    player_xy.append(None)
+                    teams.append(NOBODY)
                     continue
                 px, py, _ = parsed
-                dx = px * length - bx
-                dy = py * width - by
-                d2 = dx * dx + dy * dy
-                dist = d2 ** 0.5
-                team = int(team_of_track[slot]) if slot < len(team_of_track) else NOBODY
-                if team == HOME:
-                    if d_home is None or dist < d_home:
-                        d_home = dist
-                    if d2 <= r2:
-                        nh += 1
-                elif team == AWAY:
-                    if d_away is None or dist < d_away:
-                        d_away = dist
-                    if d2 <= r2:
-                        na += 1
-                if best_d2 is None or d2 < best_d2:
-                    best_d2 = d2
-                    best_team = team
+                player_xy.append((px * length, py * width))
+                teams.append(
+                    int(team_of_track[slot]) if slot < len(team_of_track) else NOBODY)
 
-            if d_home is not None:
-                min_dist_home[frame] = d_home
-            if d_away is not None:
-                min_dist_away[frame] = d_away
-            if best_d2 is not None:
-                nearest_team[frame] = best_team
-                nearest_dist[frame] = best_d2 ** 0.5
-            n_near_home[frame] = nh
-            n_near_away[frame] = na
-            if nh > na:
-                majority_team[frame] = HOME
-            elif na > nh:
-                majority_team[frame] = AWAY
+            prox = proximity_to_ball(player_xy, teams, (bx, by), cluster_radius_m)
+            nearest_team[frame] = prox["nearest_team"]
+            nearest_dist[frame] = prox["nearest_dist"]
+            min_dist_home[frame] = prox["min_dist_home"]
+            min_dist_away[frame] = prox["min_dist_away"]
+            n_near_home[frame] = prox["n_near_home"]
+            n_near_away[frame] = prox["n_near_away"]
+            majority_team[frame] = prox["majority_team"]
 
     return {
         "ball_present": ball_present,

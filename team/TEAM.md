@@ -11,14 +11,15 @@ Produce a validated `frame,label` CSV (199,319 rows: `H` / `A` / `D` / `X`) that
 
 Technical direction: tactical ATD → possession state machine → CSV. Optimize for **possession structure** (what private spellF1 rewards), not per-frame accuracy.
 
-**Active model line:** compliant **`sm_v1_3`** (contested majority-near-ball on sm_v1_2). Rows `sm_v1_1`…`sm_v2` in RESULTS from Oct 2026 are an **archive** of a public-GT tuning era we no longer continue. Oct archive `sm_v1_3` (Smart Tagging) ≠ compliant `sm_v1_3_compliant`.
+**Active model line:** compliant **`sm_v1_5`** (sm_v1_3 base + missing-ball H/A rules chosen on Metrica open sample games; Smart Tagging off). `sm_v1_4` is **archived** (soft ST; worse structure than sm_v1_3). Rows `sm_v1_1`…`sm_v2` in RESULTS from Oct 2026 are an **archive** of a public-GT tuning era we no longer continue. Oct archive `sm_v1_3`/`sm_v1_4` ≠ compliant `sm_v1_*_compliant` files.
 
 **Next compliant levers** (rule/physics citations + local non-GT structure; no public-floor keep/drop):
 
 1. ~~Cluster / majority near ball~~ — **done** (`sm_v1_3`).
-2. **Soft Smart Tagging redesign** — set-piece → D capped; restart team as weak prior (not phase labels as truth).
-3. **Pass-like same-team travel** — consecutive same-team contacts / ball hops.
-4. **Homography / broadcast** — deferred until tactical line is frozen (T90).
+2. ~~Soft Smart Tagging redesign~~ — **done / archived** (`sm_v1_4`; not the structure reference).
+3. ~~Missing-ball H/A (external Metrica)~~ — **done** (`sm_v1_5`).
+4. **Pass-like same-team travel** — consecutive same-team contacts / ball hops.
+5. **Homography / broadcast** — deferred until tactical line is frozen (T90).
 
 Old A/B with public floors + GT duration bands is **archived** — do not revive.
 
@@ -82,11 +83,12 @@ Public 5-minute GT: **one-off pipeline check** (validate + scorer runs) only. **
 
 ### How we assess (different from the Oct public-GT era)
 
-Keep/drop a change using **rule/physics citation** plus **local non-GT CSV structure** — not public spellF1.
+Keep/drop a change using **rule/physics citation** plus **local non-GT CSV structure** — not public spellF1. For missing-ball H/A correctness we also use **licensed external games** (Metrica sample-data).
 
-1. **Vs prior compliant CSV** (e.g. `sm_v1_2_compliant` → `sm_v1_3_compliant`): graded X, X-after-D, short H/A islands (&lt;12f / &lt;25f), n_spells, mean spell duration. Prefer flat or better structure (fewer short islands / not exploding spell count).
-2. **Vs `evaluation/results/baseline_smooth50.csv`** as the **structure reference** (same metrics on graded halves). Prefer fewer short islands and longer mean spell duration than smooth50 where possible — aligned with the published full-match floor story, without using possession GT. Graded X may still be &gt; 0 (smooth50 never abstains); that alone is not a fail.
-3. **Public scorer once** → RESULTS log only. Never the keep driver.
+1. **Vs structure reference `sm_v1_3_compliant`** (best local structure; sm_v1_4 is archived): graded X, X-after-D, short H/A islands (&lt;12f / &lt;25f), n_spells, mean spell duration. Prefer flat or better vs sm_v1_3.
+2. **Vs `evaluation/results/baseline_smooth50.csv`** as the **floor structure reference** (same metrics on graded halves). Prefer fewer short islands and longer mean spell duration than smooth50 where possible. Graded X may still be &gt; 0 (smooth50 never abstains); that alone is not a fail.
+3. **External games (correctness):** Metrica Sample_Game_1/2 with event-derived labels + synthetic ball dropout. Choose missing-ball rules only if they beat sm_v1_3 on external spellF1 and hidden-frame team accuracy (leave-one-game-out). Never use BAR-ATH GT / hand labels.
+4. **Public scorer once** → RESULTS log only. Never the keep driver.
 
 Oct process (iterate until public board / GT 17 poss moved) is archived. See [RESULTS.md](RESULTS.md).
 

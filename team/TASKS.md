@@ -40,8 +40,9 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 | T23 | Smart Tagging soft priors (set pieces → D / restart; phases as weak votes) | E1 | 3 | done | Nov 7 | Priors wired; do **not** copy phase intervals as labels; logged in RESULTS | T21, T22 |
 | T24 | Rule/physics upgrades + local structure checks (no GT-driven keep/drop) | E1 | 3 | done | Nov 9 | Compliant sm_v1_1 shipped; RESULTS cites challenge rules; local non-GT checks; no public-board selection | T21, T22 |
 | T25 | Cluster / majority near ball (contested override of nearest) | E1 | 3–4 | done | Nov 3 | Features `n_near_*` + `majority_team`; SM contested cand; `sm_v1_3_compliant`; local vs sm_v1_2 flat; Keep? cites team presence | T24 |
-| T26 | Soft Smart Tagging redesign (capped set-piece D; weak restart prior) | E1 | 4 | todo | Nov 12 | Rule-only priors; not default until local structure OK; no GT caps | T25 |
-| T27 | Pass-like same-team travel (consecutive same-team contacts) | E1 | 4 | todo | after T26 | Physics citation + local structure; no public-floor keep/drop | T26 |
+| T26 | Soft Smart Tagging redesign (capped set-piece D; missing-aware) | E1 | 4 | done | Nov 7 | Missing-aware SET PIECES→D; `sm_v1_4_compliant`; explained missing ↑; phase votes off; local vs sm_v1_3; later archived vs sm_v1_3 structure | T25 |
+| T28 | Missing-ball H/A via Metrica external validation | E1 | 4 | done | Nov 7 | External harness; backdate+gap-mid wins vs sm_v1_3; `sm_v1_5_compliant`; local structure ≥ sm_v1_3 ≪ smooth50; ST off | T25 |
+| T27 | Pass-like same-team travel (consecutive same-team contacts) | E1 | 4 | todo | after T28 | Physics citation + local structure; no public-floor keep/drop | T28 |
 
 ---
 

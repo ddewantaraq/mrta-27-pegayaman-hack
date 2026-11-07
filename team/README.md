@@ -16,7 +16,7 @@ Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_D
 | Features / rules | `starter/features.py`, `state_machine.py` |
 | Public scorer | `evaluation/run_evaluation.py` (pipeline **log** only — not a tuning loop) |
 
-**Current default (compliant path):** **`sm_v1_3`** (contested majority-near-ball on sm_v1_2). Restored `sm_v1` kept as `--control-frames 15 …` rollback; `--no-majority-near` for sm_v1_2 cand. Oct 2026 `sm_v2` / archive `sm_v1_3` are **not** the forward default.
+**Current default (compliant path):** **`sm_v1_5`** (sm_v1_3 + backdate-switch + gap-bridge mid; Smart Tagging off). Rollback: `--no-backdate-switch --gap-bridge off` (sm_v1_3) / `--smart-tagging` (archived sm_v1_4) / `--no-majority-near` / restored `sm_v1` CLI. Oct 2026 `sm_v2` / archive rows are **not** the forward default.
 
 **Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
 
@@ -79,20 +79,26 @@ python evaluation/run_evaluation.py
 
 **Validate:** `OK` and `199319 rows`.
 
-**Structure (no GT):** compare graded-half metrics (short H/A islands, mean spell dur, n_spells, graded X, X-after-D) to the **previous compliant CSV** and to **`evaluation/results/baseline_smooth50.csv`** (structure reference — prefer fewer short islands / longer mean dur than smooth50). Public scoreboard numbers are for the RESULTS log only — not a success gate. See [TEAM.md](TEAM.md) § How we assess.
+**Structure (no GT):** compare graded-half metrics (short H/A islands, mean spell dur, n_spells, graded X, X-after-D) to **`sm_v1_3_compliant.csv`** and to **`evaluation/results/baseline_smooth50.csv`**. Prefer structure ≥ sm_v1_3 and clearly better than smooth50. Missing-ball H/A correctness: Metrica external harness (`starter/external/`). Public scoreboard numbers are for the RESULTS log only — not a success gate. See [TEAM.md](TEAM.md) § How we assess.
 
 Full table: [RESULTS.md](RESULTS.md).
 
 ---
 
-## Useful flags (defaults = compliant `sm_v1_3`)
+## Useful flags (defaults = compliant `sm_v1_5`)
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `--control-frames` / `--min-spell-frames` | `25` / `12` | Control hysteresis (~1 s) / short H–A merge |
+| `--control-frames` / `--min-spell-frames` | `25` / `18` | Control hysteresis (~1 s) / short H–A merge |
 | `--out-margin` | `0.02` | Out-of-pitch → `D` |
 | `--missing-near-edge-frames` / `--still-near-edge-frames` | `50` / `25` | Near-edge missing / still → `D` |
 | `--keep-last-live-on-dead` | on | Freeze last team through `D` |
+| `--backdate-switch` / `--no-backdate-switch` | on | Relabel pending frames once switch confirms |
+| `--gap-bridge` | `mid` | `off\|start\|mid\|end` — place switch inside live missing gap |
+| `--long-gap-dead-frames` | `0` | Optional missing streak → D (off; hurt externally) |
+| `--no-majority-near` | — | Disable contested majority (sm_v1_2 cand) |
+| `--smart-tagging` | off | Archived sm_v1_4 soft SET PIECES → D |
+| `--set-piece-dead-cap-frames` | `50` | First N frames of set-piece tag → D when ball visible |
 | `--clear-last-live-on-dead` | — | sm_v1 rollback behaviour |
 
 ---

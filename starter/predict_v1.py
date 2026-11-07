@@ -8,12 +8,13 @@ By default writes the next auto-incremented file under evaluation/results/:
 Pass --out PATH to force a path and skip auto-versioning.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v1_3 (control=25, min_spell=18, edge dead-ball on,
-keep_last_live_on_dead, establish-without-X, contested majority-near-ball).
-Chosen from challenge/physics rules — not public-GT score chasing.
-Restored sm_v1: --control-frames 15 --min-spell-frames 8
---missing-near-edge-frames 0 --still-near-edge-frames 0
---clear-last-live-on-dead --no-majority-near.
+Defaults = compliant sm_v1_5 (sm_v1_3 base + external-chosen missing-ball
+H/A flags; Smart Tagging off). sm_v1_3: control=25, min_spell=18, edge
+dead-ball on, keep_last_live_on_dead, establish-without-X, contested
+majority-near-ball. Archive sm_v1_4: --smart-tagging. Restored sm_v1:
+--control-frames 15 --min-spell-frames 8 --missing-near-edge-frames 0
+--still-near-edge-frames 0 --clear-last-live-on-dead --no-majority-near
+--no-smart-tagging.
 """
 
 from __future__ import print_function
@@ -36,17 +37,26 @@ from features import (  # noqa: E402
     extract_features,
     summarize,
 )
+from smart_priors import (  # noqa: E402
+    DEFAULT_SET_PIECE_DEAD_CAP_FRAMES,
+    build_smart_priors,
+    summarize_priors,
+)
 from state_machine import (  # noqa: E402
+    DEFAULT_BACKDATE_SWITCH,
     DEFAULT_CONTEST_DIST_M,
     DEFAULT_CONTROL_DIST_M,
     DEFAULT_CONTROL_FRAMES,
+    DEFAULT_GAP_BRIDGE,
     DEFAULT_KEEP_LAST_LIVE_ON_DEAD,
+    DEFAULT_LONG_GAP_DEAD_FRAMES,
     DEFAULT_MIN_SPELL_FRAMES,
     DEFAULT_MISSING_NEAR_EDGE_FRAMES,
     DEFAULT_OUT_MARGIN,
     DEFAULT_STILL_NEAR_EDGE_FRAMES,
     DEFAULT_STILL_SPEED_M,
     DEFAULT_USE_MAJORITY_NEAR,
+    DEFAULT_USE_SMART_TAGGING,
     label_possession,
     params_dict,
 )
@@ -173,6 +183,53 @@ def main():
         action="store_false",
         help="disable majority override; pure nearest (sm_v1_2 cand)",
     )
+    parser.add_argument(
+        "--smart-tagging",
+        dest="use_smart_tagging",
+        action="store_true",
+        default=DEFAULT_USE_SMART_TAGGING,
+        help="soft SET PIECES -> D (archived sm_v1_4; default off in sm_v1_5)",
+    )
+    parser.add_argument(
+        "--no-smart-tagging",
+        dest="use_smart_tagging",
+        action="store_false",
+        help="disable Smart Tagging priors (sm_v1_5 / sm_v1_3 path)",
+    )
+    parser.add_argument(
+        "--set-piece-dead-cap-frames", type=int,
+        default=DEFAULT_SET_PIECE_DEAD_CAP_FRAMES,
+        help="first N frames of each SET PIECES event -> D when ball visible",
+    )
+    parser.add_argument(
+        "--full-set-piece-dead",
+        action="store_true",
+        help="archive/debug: force D on full SET PIECES span (not compliant default)",
+    )
+    parser.add_argument(
+        "--backdate-switch",
+        dest="backdate_switch",
+        action="store_true",
+        default=DEFAULT_BACKDATE_SWITCH,
+        help="relabel pending frames to new team once switch confirms",
+    )
+    parser.add_argument(
+        "--no-backdate-switch",
+        dest="backdate_switch",
+        action="store_false",
+        help="keep lagging last_live through the pending window",
+    )
+    parser.add_argument(
+        "--gap-bridge",
+        choices=("off", "start", "mid", "end"),
+        default=DEFAULT_GAP_BRIDGE,
+        help="place H/A switch inside a live missing gap when teams disagree",
+    )
+    parser.add_argument(
+        "--long-gap-dead-frames", type=int,
+        default=DEFAULT_LONG_GAP_DEAD_FRAMES,
+        help="missing streak >= N frames -> D (0 = off)",
+    )
     args = parser.parse_args()
 
     version = None
@@ -188,6 +245,19 @@ def main():
         game=args.game, cluster_radius_m=args.cluster_radius_m)
     summarize(features)
 
+    set_piece_dead = None
+    cap = None if args.full_set_piece_dead else args.set_piece_dead_cap_frames
+    if args.use_smart_tagging:
+        priors = build_smart_priors(
+            n_frames=features["n_frames"],
+            game=args.game,
+            set_piece_dead_cap_frames=cap,
+            use_phase_votes=False,
+            ball_present=None if args.full_set_piece_dead else features["ball_present"],
+        )
+        summarize_priors(priors)
+        set_piece_dead = priors["set_piece_dead"]
+
     params = params_dict(
         control_frames=args.control_frames,
         control_dist_m=args.control_dist_m,
@@ -199,6 +269,11 @@ def main():
         keep_last_live_on_dead=args.keep_last_live_on_dead,
         use_majority_near=args.use_majority_near,
         contest_dist_m=args.contest_dist_m,
+        use_smart_tagging=args.use_smart_tagging,
+        set_piece_dead_cap_frames=cap,
+        backdate_switch=args.backdate_switch,
+        gap_bridge=args.gap_bridge,
+        long_gap_dead_frames=args.long_gap_dead_frames,
     )
     print("state_machine params: {}".format(params))
     print("cluster_radius_m: {}".format(args.cluster_radius_m))
@@ -216,6 +291,10 @@ def main():
         keep_last_live_on_dead=args.keep_last_live_on_dead,
         use_majority_near=args.use_majority_near,
         contest_dist_m=args.contest_dist_m,
+        set_piece_dead=set_piece_dead,
+        backdate_switch=args.backdate_switch,
+        gap_bridge=args.gap_bridge,
+        long_gap_dead_frames=args.long_gap_dead_frames,
     )
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}

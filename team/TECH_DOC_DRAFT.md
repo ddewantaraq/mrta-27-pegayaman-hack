@@ -17,7 +17,7 @@ _Owner: B · Reviewer: E1_ — **T13r signed off 2026-10-24**
 - **macroF1** (tie-break / per-frame): Mean of the per-class F1 scores for `H`, `A`, and `D` on every graded frame. Measures “right letter, right frame.” Useful diagnostic; reported beside spellF1 and breaks ties only.
 - **Organiser clarification (Nov 2026):** parameters must **not** be trained, fitted, or calibrated on the possession ground truth or the provided video. The public 5-minute GT is for **pipeline verification** only (file shape, scorer runs). We set knobs from challenge rules / ATD physics (or licensed external data), not from public spellF1 keep/drop.
 - Why public spellF1 alone was always a weak private proxy: smooth125 can lead the public window while losing on the full match (published floor smooth50 spellF1 **0.2433**). That is a second reason not to chase the public board — the first is the clarification itself.
-- **How we assess (vs Oct public-GT keep/drop):** local CSV structure vs the prior compliant submission **and** vs shipped `baseline_smooth50.csv` (short H/A islands, mean spell duration, n_spells, graded X / X-after-D). Prefer fewer short islands and longer mean duration than smooth50 where possible — a GT-free proxy for the full-match floor story. Public board = log only. Detail: team [TEAM.md](TEAM.md) § How we assess.
+- **How we assess (vs Oct public-GT keep/drop):** local CSV structure vs **`sm_v1_3_compliant`** (structure reference) **and** vs shipped `baseline_smooth50.csv`. Missing-ball H/A correctness is measured only on **external** Metrica sample games (event-derived labels + synthetic ball dropout). Public board = log only. Detail: team [TEAM.md](TEAM.md) § How we assess.
 
 Illustration (pipeline sanity, T10): raw invents far more possessions than a coach would count → structure matters more than frame accuracy.
 
@@ -42,20 +42,23 @@ _Owner: E1 · B lists “dropped”_
 | Asset | Used? | How |
 |-------|-------|-----|
 | Tactical ATD | yes | Core input for possession (nearest + cluster majority near ball) |
-| Smart Tagging | not default | Module exists; next lever #2 — rule-only prior redesign (no GT-tuned caps) |
-| Tactical homography | no | Lever #4 deferred; optional debug only |
+| Smart Tagging | archived | sm_v1_4 path via `--smart-tagging`; **off** in sm_v1_5 default |
+| Tactical homography | no | Lever deferred; optional debug only |
 | Tactical video | no | May inspect to understand possession; not an algorithm input; no output-vs-video check |
-| Broadcast (all) | no | Lever #4 / T90; separate timeline |
+| Broadcast (all) | no | Deferred / T90; separate timeline |
+| Metrica sample-data (other games) | yes (validation) | External label source for missing-ball H/A rules; not an algorithm input on BAR-ATH |
 
-**Compliant levers (order):** (1) cluster/majority near ball → (2) Soft Smart Tagging redesign → (3) pass-like same-team travel → (4) homography/broadcast deferred. Keep gates = rule citation + local non-GT structure. Old public-floors + GT duration-band A/B is archived.
+**Compliant levers (order):** (1) cluster/majority ~~done~~ → (2) Soft ST ~~done/archived (`sm_v1_4`)~~ → (3) missing-ball H/A ~~done (`sm_v1_5`)~~ → (4) pass-like same-team travel → (5) homography/broadcast deferred. Keep gates = rule citation + local structure vs sm_v1_3 + smooth50 (+ external Metrica for missing-ball). Old public-floors + GT duration-band A/B is archived.
 
-Oct 2026 public-GT-tuned variants (archive `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative. Compliant `sm_v1_3_compliant` (cluster) is a different file from that Oct Smart Tagging row.
+Oct 2026 public-GT-tuned variants (archive `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative. Compliant `sm_v1_*_compliant` files are distinct from those Oct rows.
+
+**External data acknowledgement:** Sample tracking and event data from [Metrica Sports sample-data](https://github.com/metrica-sports/sample-data). Used only for compliant validation of missing-ball rules on *other* games.
 
 ---
 
 ## 3. Possession rules implemented
 
-_Owner: B from CHALLENGE.md (T12) · E1 maps to code (`sm_v1` restore → compliant `sm_v1_3`)_
+_Owner: B from CHALLENGE.md (T12) · E1 maps to code (`sm_v1` restore → compliant `sm_v1_5`)_
 
 ### Challenge rules (what we aim for)
 
@@ -88,11 +91,36 @@ Features (tactical ATD): ball present, position, nearest team and distance (m), 
 - **Establish-without-X:** while `last_live` is unset and a close nearest team is present, emit that team's letter during the pending streak (CHALLENGE: live ball → H/A). Still require `control_frames` before locking `last_live`. `X` only for ungraded, never-established + ball missing / no close nearest.
 - Merge threshold **18** frames (~0.72 s) — touch without control ≠ turnover; still well below smooth125 / merge-50.
 
-**Compliant `sm_v1_3` (default; builds on sm_v1_2):**
+**Compliant `sm_v1_3` (builds on sm_v1_2):**
 - Features: `n_near_home` / `n_near_away` within **3 m** cluster radius; `majority_team` when counts differ.
 - **Contested override:** if majority disagrees with nearest and `|min_dist_home − min_dist_away| ≤ 1.0` m, use majority as cand. Clear 1v1 nearest stays nearest. Rollback: `--no-majority-near`.
 
+**Compliant `sm_v1_4` (archived; builds on sm_v1_3):**
+- Soft Smart Tagging SET PIECES → D (not phase intervals as H/A).
+- **Missing-aware:** first **50** frames of each set-piece tag → D; additionally any **ball-missing** frame inside the full tag span → D.
+- Phase votes **off**. Reachable via `--smart-tagging`. Not the structure reference (mean dur / short islands worse than sm_v1_3).
+
+**Compliant `sm_v1_5` (default; builds on sm_v1_3; ST off):**
+- **Backdate switch** (`--backdate-switch`): once opposing cand confirms for `control_frames`, relabel the pending window to the new team (Link & Hoernig 2017: switch at first opposing control).
+- **Gap bridge mid** (`--gap-bridge mid`): on a live missing gap, if the confirmed team after the gap differs from the team before it, place the switch at the gap midpoint (turnover happened in the dark; TBP continues through void phases).
+- Long-gap → D was A/B'd externally and **dropped** (hurt hidden-frame team accuracy).
+- Chosen on Metrica Sample_Game_1/2 only; BAR-ATH used for non-GT structure vs sm_v1_3 + smooth50. Rollback: `--no-backdate-switch --gap-bridge off`.
+
 One command: `predict_v1.bat` / `predict_v1.sh` (writes next `sm_v*`, validates, optional score log).
+
+### External validation (missing-ball H/A)
+
+Harness: `starter/external/` — fetch Metrica Sample_Game_1/2, build features, derive H/A/D/X from events (PASS/RECOVERY/SHOT/SET PIECE/BALL LOST set team; BALL OUT→D until SET PIECE; X pre-kickoff/halftime), hide the ball on natural missing + 2/5/10/30 s live gaps, score with `possession_metrics.evaluate` plus **hidden-frame team accuracy**.
+
+Aggregate (mean over 2 games × 5 dropouts):
+
+| Candidate | spellF1 | hidden-frame team acc |
+|-----------|---------|------------------------|
+| sm_v1_3 | 0.3141 | 0.5052 |
+| **sm_v1_5** (mid + backdate) | **0.3701** | **0.5102** |
+| smooth50-equivalent | 0.3210 | 0.1528 |
+
+Leave-one-game-out: sm_v1_5 beat sm_v1_3 on both Sample_Game_1 and Sample_Game_2. Literature: Link & Hoernig, *Individual ball possession in soccer*, PLOS ONE 2017.
 
 ---
 
@@ -100,10 +128,10 @@ One command: `predict_v1.bat` / `predict_v1.sh` (writes next `sm_v*`, validates,
 
 _Owner: E1_
 
-- Ball missing (~41% graded): **Hold** last live team; `X` mainly when never established + no ball/nearest, or ungraded. During establish with a close nearest, sm_v1_2+ labels H/A instead of X.
+- Ball missing (~41% graded): **Hold** last live team; sm_v1_5 may **retime** the H/A switch inside a gap when the team after reappear differs from the team before (gap-bridge mid) and backdates the pending window once control confirms. `X` mainly when never established + no ball/nearest, or ungraded. During establish with a close nearest, sm_v1_2+ labels H/A instead of X.
 - No player IDs: team-collective nearest + cluster majority in the control circle (sm_v1_3).
-- Dead-ball: out-of-pitch always; sm_v1_1+ adds near-edge missing/still heuristics. Mid-pitch stoppages remain hard without GT calibration.
-- Smart Tagging: available in repo, not default (lever #2).
+- Dead-ball: out-of-pitch always; sm_v1_1+ near-edge missing/still. Soft SET PIECES archived (`--smart-tagging`). Mid-pitch stoppages remain hard.
+- Smart Tagging: **off** in sm_v1_5 default; phase votes off.
 
 ---
 
@@ -122,7 +150,7 @@ _Owner: B + E1_
 _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate a submission that matches our
-**compliant defaults** (`sm_v1_3`). Step-by-step: **[README.md](README.md)**.
+**compliant defaults** (`sm_v1_5`). Step-by-step: **[README.md](README.md)**.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -133,8 +161,9 @@ bash predict_v1.sh
 Windows: activate `.venv`, then `predict_v1.bat`.
 
 - Output: next `evaluation/results/sm_v*.csv` — 199,319 rows, `frame,label`. Gitignored.
-- Defaults (compliant `sm_v1_3`): `control_frames=25`, `control_dist_m=3.0`, `out_margin=0.02`, `min_spell_frames=18`, `missing_near_edge_frames=50`, `still_near_edge_frames=25`, `still_speed_m=0.5`, `keep_last_live_on_dead=True`, establish-without-X, `use_majority_near=True`, `contest_dist_m=1.0`, `cluster_radius_m=3.0`. Rollback: `--no-majority-near` (sm_v1_2 cand) or restored sm_v1 CLI (control=15, min_spell=8, edge knobs 0, clear last_live on D).
-- Match `data/` is **not** in the public repo. See `DATA.md`.
+- Defaults (compliant `sm_v1_5`): sm_v1_3 knobs plus `backdate_switch=True`, `gap_bridge=mid`, `use_smart_tagging=False`. Rollback: `--no-backdate-switch --gap-bridge off` (sm_v1_3) or `--smart-tagging` (archived sm_v1_4) / restored sm_v1 CLI.
+- External validation (optional): `python starter/external/fetch_metrica.py` then `python starter/external/eval_external.py --sweep`.
+- Match `data/` and `data_external/` are **not** in the public repo. See `DATA.md`.
 
 ---
 
@@ -151,3 +180,5 @@ Windows: activate `.venv`, then `predict_v1.bat`.
 | 2026-11-03 | E1 | Clarification compliance: restore sm_v1; §0/§3/§6 rewritten; sm_v1_1 rule path |
 | 2026-11-03 | E1 | sm_v1_2 default: establish-without-X + min_spell 18; §3/§4/§6 |
 | 2026-11-03 | E1 | sm_v1_3 default: contested majority-near-ball; levers 1–4 in §2; §3/§6 |
+| 2026-11-07 | E1 | sm_v1_4: missing-aware soft SET PIECES → D; later archived vs sm_v1_3 structure |
+| 2026-11-07 | E1 | sm_v1_5 default: backdate-switch + gap-bridge mid (Metrica external); §2/§3/§4/§6 |
