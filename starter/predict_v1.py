@@ -8,13 +8,10 @@ By default writes the next auto-incremented file under evaluation/results/:
 Pass --out PATH to force a path and skip auto-versioning.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v1_5 (sm_v1_3 base + external-chosen missing-ball
-H/A flags; Smart Tagging off). sm_v1_3: control=25, min_spell=18, edge
-dead-ball on, keep_last_live_on_dead, establish-without-X, contested
-majority-near-ball. Archive sm_v1_4: --smart-tagging. Restored sm_v1:
---control-frames 15 --min-spell-frames 8 --missing-near-edge-frames 0
---still-near-edge-frames 0 --clear-last-live-on-dead --no-majority-near
---no-smart-tagging.
+Defaults = compliant sm_v1_6 (sm_v1_5 + half-time clear, D before 2nd
+kickoff, seed opposite kickoff team). sm_v1_5: backdate + gap-bridge mid;
+Smart Tagging off. Archive sm_v1_4: --smart-tagging. Rollback kickoff:
+--no-half-kickoff-reset.
 """
 
 from __future__ import print_function
@@ -48,6 +45,7 @@ from state_machine import (  # noqa: E402
     DEFAULT_CONTROL_DIST_M,
     DEFAULT_CONTROL_FRAMES,
     DEFAULT_GAP_BRIDGE,
+    DEFAULT_HALF_KICKOFF_RESET,
     DEFAULT_KEEP_LAST_LIVE_ON_DEAD,
     DEFAULT_LONG_GAP_DEAD_FRAMES,
     DEFAULT_MIN_SPELL_FRAMES,
@@ -230,6 +228,19 @@ def main():
         default=DEFAULT_LONG_GAP_DEAD_FRAMES,
         help="missing streak >= N frames -> D (0 = off)",
     )
+    parser.add_argument(
+        "--half-kickoff-reset",
+        dest="half_kickoff_reset",
+        action="store_true",
+        default=DEFAULT_HALF_KICKOFF_RESET,
+        help="clear last_live at HT; D before 2nd KO; seed opposite team (sm_v1_6)",
+    )
+    parser.add_argument(
+        "--no-half-kickoff-reset",
+        dest="half_kickoff_reset",
+        action="store_false",
+        help="disable half-kickoff reset (sm_v1_5 path)",
+    )
     args = parser.parse_args()
 
     version = None
@@ -274,6 +285,7 @@ def main():
         backdate_switch=args.backdate_switch,
         gap_bridge=args.gap_bridge,
         long_gap_dead_frames=args.long_gap_dead_frames,
+        half_kickoff_reset=args.half_kickoff_reset,
     )
     print("state_machine params: {}".format(params))
     print("cluster_radius_m: {}".format(args.cluster_radius_m))
@@ -295,6 +307,7 @@ def main():
         backdate_switch=args.backdate_switch,
         gap_bridge=args.gap_bridge,
         long_gap_dead_frames=args.long_gap_dead_frames,
+        half_kickoff_reset=args.half_kickoff_reset,
     )
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}

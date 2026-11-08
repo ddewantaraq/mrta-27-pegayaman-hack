@@ -48,7 +48,7 @@ _Owner: E1 · B lists “dropped”_
 | Broadcast (all) | no | Deferred / T90; separate timeline |
 | Metrica sample-data (other games) | yes (validation) | External label source for missing-ball H/A rules; not an algorithm input on BAR-ATH |
 
-**Compliant levers (order):** (1) cluster/majority ~~done~~ → (2) Soft ST ~~done/archived (`sm_v1_4`)~~ → (3) missing-ball H/A ~~done (`sm_v1_5`)~~ → (4) pass-like same-team travel → (5) homography/broadcast deferred. Keep gates = rule citation + local structure vs sm_v1_3 + smooth50 (+ external Metrica for missing-ball). Old public-floors + GT duration-band A/B is archived.
+**Compliant levers (order):** (1) cluster/majority ~~done~~ → (2) Soft ST ~~done/archived (`sm_v1_4`)~~ → (3) missing-ball H/A ~~done (`sm_v1_5`)~~ → (4) half-kickoff reset ~~done (`sm_v1_6`)~~ → (5) pass-like same-team travel → (6) homography/broadcast deferred. Keep gates = rule citation + local structure vs prior + smooth50 (+ external Metrica for missing-ball). Old public-floors + GT duration-band A/B is archived.
 
 Oct 2026 public-GT-tuned variants (archive `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative. Compliant `sm_v1_*_compliant` files are distinct from those Oct rows.
 
@@ -100,11 +100,16 @@ Features (tactical ATD): ball present, position, nearest team and distance (m), 
 - **Missing-aware:** first **50** frames of each set-piece tag → D; additionally any **ball-missing** frame inside the full tag span → D.
 - Phase votes **off**. Reachable via `--smart-tagging`. Not the structure reference (mean dur / short islands worse than sm_v1_3).
 
-**Compliant `sm_v1_5` (default; builds on sm_v1_3; ST off):**
+**Compliant `sm_v1_5` (builds on sm_v1_3; ST off):**
 - **Backdate switch** (`--backdate-switch`): once opposing cand confirms for `control_frames`, relabel the pending window to the new team (Link & Hoernig 2017: switch at first opposing control).
 - **Gap bridge mid** (`--gap-bridge mid`): on a live missing gap, if the confirmed team after the gap differs from the team before it, place the switch at the gap midpoint (turnover happened in the dark; TBP continues through void phases).
 - Long-gap → D was A/B'd externally and **dropped** (hurt hidden-frame team accuracy).
 - Chosen on Metrica Sample_Game_1/2 only; BAR-ATH used for non-GT structure vs sm_v1_3 + smooth50. Rollback: `--no-backdate-switch --gap-bridge off`.
+
+**Compliant `sm_v1_6` (default; builds on sm_v1_5):**
+- **Half-kickoff reset** (`--half-kickoff-reset`): clear `last_live` on ungraded (halftime); graded half-2 frames before published 2nd kickoff (`KICKOFF_VIDEO_FRAMES["2nd Half"]`, FAQ/DATA) → **D**; at that frame seed `last_live` = opposite of first locked team in half 1 (Laws: other team kicks off 2nd half).
+- Half-1 cold-start X unchanged (live after kickoff, nobody close yet).
+- Rollback: `--no-half-kickoff-reset`.
 
 One command: `predict_v1.bat` / `predict_v1.sh` (writes next `sm_v*`, validates, optional score log).
 
@@ -128,10 +133,10 @@ Leave-one-game-out: sm_v1_5 beat sm_v1_3 on both Sample_Game_1 and Sample_Game_2
 
 _Owner: E1_
 
-- Ball missing (~41% graded): **Hold** last live team; sm_v1_5 may **retime** the H/A switch inside a gap when the team after reappear differs from the team before (gap-bridge mid) and backdates the pending window once control confirms. `X` mainly when never established + no ball/nearest, or ungraded. During establish with a close nearest, sm_v1_2+ labels H/A instead of X.
+- Ball missing (~41% graded): **Hold** last live team; sm_v1_5+ may **retime** the H/A switch inside a gap (gap-bridge mid) and backdates pending once control confirms. `X` mainly kickoff cold-start / never established, or ungraded. sm_v1_6 clears `last_live` at half-time so half 2 does not inherit half 1.
 - No player IDs: team-collective nearest + cluster majority in the control circle (sm_v1_3).
-- Dead-ball: out-of-pitch always; sm_v1_1+ near-edge missing/still. Soft SET PIECES archived (`--smart-tagging`). Mid-pitch stoppages remain hard.
-- Smart Tagging: **off** in sm_v1_5 default; phase votes off.
+- Dead-ball: out-of-pitch always; sm_v1_1+ near-edge missing/still; sm_v1_6 D on half-2 graded frames before published 2nd kickoff. Soft SET PIECES archived (`--smart-tagging`).
+- Smart Tagging: **off** in sm_v1_6 default; phase votes off. Kickoff frames come from published constants (FAQ/DATA), not ST XML.
 
 ---
 
@@ -150,7 +155,7 @@ _Owner: B + E1_
 _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate a submission that matches our
-**compliant defaults** (`sm_v1_5`). Step-by-step: **[README.md](README.md)**.
+**compliant defaults** (`sm_v1_6`). Step-by-step: **[README.md](README.md)**.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -161,7 +166,7 @@ bash predict_v1.sh
 Windows: activate `.venv`, then `predict_v1.bat`.
 
 - Output: next `evaluation/results/sm_v*.csv` — 199,319 rows, `frame,label`. Gitignored.
-- Defaults (compliant `sm_v1_5`): sm_v1_3 knobs plus `backdate_switch=True`, `gap_bridge=mid`, `use_smart_tagging=False`. Rollback: `--no-backdate-switch --gap-bridge off` (sm_v1_3) or `--smart-tagging` (archived sm_v1_4) / restored sm_v1 CLI.
+- Defaults (compliant `sm_v1_6`): sm_v1_5 knobs plus `half_kickoff_reset=True`. Rollback: `--no-half-kickoff-reset` (sm_v1_5) / `--no-backdate-switch --gap-bridge off` / `--smart-tagging` (archived sm_v1_4).
 - External validation (optional): `python starter/external/fetch_metrica.py` then `python starter/external/eval_external.py --sweep`.
 - Match `data/` and `data_external/` are **not** in the public repo. See `DATA.md`.
 
@@ -181,4 +186,5 @@ Windows: activate `.venv`, then `predict_v1.bat`.
 | 2026-11-03 | E1 | sm_v1_2 default: establish-without-X + min_spell 18; §3/§4/§6 |
 | 2026-11-03 | E1 | sm_v1_3 default: contested majority-near-ball; levers 1–4 in §2; §3/§6 |
 | 2026-11-07 | E1 | sm_v1_4: missing-aware soft SET PIECES → D; later archived vs sm_v1_3 structure |
-| 2026-11-07 | E1 | sm_v1_5 default: backdate-switch + gap-bridge mid (Metrica external); §2/§3/§4/§6 |
+| 2026-11-07 | E1 | sm_v1_5: backdate-switch + gap-bridge mid (Metrica external); §2/§3/§4/§6 |
+| 2026-11-08 | E1 | sm_v1_6 default: half-kickoff-reset (HT clear, D pre-2nd KO, opposite seed); §3/§6 |

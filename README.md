@@ -97,7 +97,7 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork includes a possession **state machine** over tactical ATD.
-**Active defaults** follow compliant **`sm_v1_5`** (sm_v1_3 + backdate-switch + gap-bridge mid; Smart Tagging off; missing-ball rules chosen on Metrica open sample games).
+**Active defaults** follow compliant **`sm_v1_6`** (sm_v1_5 + half-time clear, D before 2nd kickoff, opposite kickoff seed; Smart Tagging off).
 We do **not** tune parameters on the public possession ground truth (organiser clarification).
 
 ```bash

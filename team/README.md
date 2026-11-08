@@ -16,7 +16,7 @@ Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_D
 | Features / rules | `starter/features.py`, `state_machine.py` |
 | Public scorer | `evaluation/run_evaluation.py` (pipeline **log** only — not a tuning loop) |
 
-**Current default (compliant path):** **`sm_v1_5`** (sm_v1_3 + backdate-switch + gap-bridge mid; Smart Tagging off). Rollback: `--no-backdate-switch --gap-bridge off` (sm_v1_3) / `--smart-tagging` (archived sm_v1_4) / `--no-majority-near` / restored `sm_v1` CLI. Oct 2026 `sm_v2` / archive rows are **not** the forward default.
+**Current default (compliant path):** **`sm_v1_6`** (sm_v1_5 + half-kickoff-reset). Rollback: `--no-half-kickoff-reset` (sm_v1_5) / `--no-backdate-switch --gap-bridge off` / `--smart-tagging` (archived sm_v1_4). Oct 2026 archive rows are **not** the forward default.
 
 **Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
 
@@ -85,7 +85,7 @@ Full table: [RESULTS.md](RESULTS.md).
 
 ---
 
-## Useful flags (defaults = compliant `sm_v1_5`)
+## Useful flags (defaults = compliant `sm_v1_6`)
 
 | Flag | Default | Meaning |
 |------|---------|---------|
@@ -93,6 +93,7 @@ Full table: [RESULTS.md](RESULTS.md).
 | `--out-margin` | `0.02` | Out-of-pitch → `D` |
 | `--missing-near-edge-frames` / `--still-near-edge-frames` | `50` / `25` | Near-edge missing / still → `D` |
 | `--keep-last-live-on-dead` | on | Freeze last team through `D` |
+| `--half-kickoff-reset` / `--no-half-kickoff-reset` | on | HT clear; D before 2nd KO; seed opposite team |
 | `--backdate-switch` / `--no-backdate-switch` | on | Relabel pending frames once switch confirms |
 | `--gap-bridge` | `mid` | `off\|start\|mid\|end` — place switch inside live missing gap |
 | `--long-gap-dead-frames` | `0` | Optional missing streak → D (off; hurt externally) |

@@ -42,7 +42,8 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 | T25 | Cluster / majority near ball (contested override of nearest) | E1 | 3–4 | done | Nov 3 | Features `n_near_*` + `majority_team`; SM contested cand; `sm_v1_3_compliant`; local vs sm_v1_2 flat; Keep? cites team presence | T24 |
 | T26 | Soft Smart Tagging redesign (capped set-piece D; missing-aware) | E1 | 4 | done | Nov 7 | Missing-aware SET PIECES→D; `sm_v1_4_compliant`; explained missing ↑; phase votes off; local vs sm_v1_3; later archived vs sm_v1_3 structure | T25 |
 | T28 | Missing-ball H/A via Metrica external validation | E1 | 4 | done | Nov 7 | External harness; backdate+gap-mid wins vs sm_v1_3; `sm_v1_5_compliant`; local structure ≥ sm_v1_3 ≪ smooth50; ST off | T25 |
-| T27 | Pass-like same-team travel (consecutive same-team contacts) | E1 | 4 | todo | after T28 | Physics citation + local structure; no public-floor keep/drop | T28 |
+| T29 | Half-time reset + opposite 2nd-half kickoff | E1 | 4 | done | Nov 8 | Clear last_live at HT; D before published 2nd KO; seed opposite; `sm_v1_6_compliant`; local vs sm_v1_5 ≪ smooth50 | T28 |
+| T27 | Pass-like same-team travel (consecutive same-team contacts) | E1 | 4 | todo | after T29 | Physics citation + local structure; no public-floor keep/drop | T29 |
 
 ---
 

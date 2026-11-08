@@ -75,7 +75,7 @@ def smooth50_labels(features):
 
 
 def sm_v1_3_kwargs():
-    """sm_v1_3 reference parameters (Smart Tagging off; no sm_v1_5 flags)."""
+    """sm_v1_3 reference parameters (Smart Tagging off; no BAR-ATH kickoff reset)."""
     return dict(
         control_frames=DEFAULT_CONTROL_FRAMES,
         control_dist_m=DEFAULT_CONTROL_DIST_M,
@@ -91,6 +91,8 @@ def sm_v1_3_kwargs():
         backdate_switch=False,
         gap_bridge="off",
         long_gap_dead_frames=0,
+        # BAR-ATH published kickoff frames must not apply on Metrica timelines
+        half_kickoff_reset=False,
     )
 
 
