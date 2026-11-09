@@ -11,7 +11,7 @@ Produce a validated `frame,label` CSV (199,319 rows: `H` / `A` / `D` / `X`) that
 
 Technical direction: tactical ATD → possession state machine → CSV. Optimize for **possession structure** (what private spellF1 rewards), not per-frame accuracy.
 
-**Active model line:** compliant **`sm_v1_6`** (sm_v1_5 + half-time clear, D before 2nd kickoff, seed opposite kickoff team). `sm_v1_4` is **archived** (soft ST). Rows `sm_v1_1`…`sm_v2` in RESULTS from Oct 2026 are an **archive** of a public-GT tuning era we no longer continue. Oct archive files ≠ compliant `sm_v1_*_compliant` files.
+**Active model line:** compliant **`sm_v1_7`** (`sm_v1_6` + Vidal-Codina gain on frames where the ball is visible; `sm_v1_6` labels where it is missing). `sm_v1_4` is **archived** (soft ST). Rows `sm_v1_1`…`sm_v2` in RESULTS from Oct 2026 are an **archive** of a public-GT tuning era we no longer continue. Oct archive files ≠ compliant `sm_v1_*_compliant` files.
 
 **Next compliant levers** (rule/physics citations + local non-GT structure; no public-floor keep/drop):
 
@@ -19,8 +19,9 @@ Technical direction: tactical ATD → possession state machine → CSV. Optimize
 2. ~~Soft Smart Tagging redesign~~ — **done / archived** (`sm_v1_4`).
 3. ~~Missing-ball H/A (external Metrica)~~ — **done** (`sm_v1_5`).
 4. ~~Half-time / opposite 2nd kickoff~~ — **done** (`sm_v1_6`).
-5. **Pass-like same-team travel** — consecutive same-team contacts / ball hops.
-6. **Homography / broadcast** — deferred until tactical line is frozen (T90).
+5. ~~Visible-ball possession-zone gain, missing frames stay `sm_v1_6`~~ — **done** (`sm_v1_7`). Plain VC and the gap-edge variants lost hidden-frame accuracy and stay off.
+6. **Pass-like same-team travel** — consecutive same-team contacts / ball hops.
+7. **Homography / broadcast** — deferred until tactical line is frozen (T90).
 
 Old A/B with public floors + GT duration bands is **archived** — do not revive.
 

@@ -154,6 +154,38 @@ def _is_gain(start, end, x, y, speed, present, bv_threshold, ba_threshold_deg):
     return False
 
 
+def reappearance_angles(ball_x, ball_y, ball_present):
+    """Angle in degrees at the first visible frame after each missing run.
+
+    Compares the ball direction on the last visible frame with the direction on
+    the first visible frame. NaN when either side has no step. Uses the same
+    Savitzky-Golay smooth as the gain test. Hidden coordinates must already be
+    removed by the caller; this does not look inside the gap.
+    """
+    present = np.asarray(ball_present, dtype=bool)
+    xs, ys = _smooth_visible(ball_x, ball_y, present)
+    n = len(xs)
+    angles = np.full(n, np.nan, dtype=np.float64)
+    i = 0
+    prev_end = None
+    while i < n:
+        if not present[i]:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and present[j]:
+            j += 1
+        if (prev_end is not None and i > prev_end + 1
+                and prev_end - 1 >= 0 and present[prev_end - 1]
+                and i + 1 < n and present[i + 1]):
+            v_in = (xs[prev_end] - xs[prev_end - 1], ys[prev_end] - ys[prev_end - 1])
+            v_out = (xs[i + 1] - xs[i], ys[i + 1] - ys[i])
+            angles[i] = _angle_deg(v_in, v_out)
+        prev_end = j - 1
+        i = j
+    return angles
+
+
 def team_possession_from_zones(
     pz_player,
     pz_team,

@@ -1,6 +1,6 @@
 """T21: possession state machine over T20 features.
 
-Default path = compliant sm_v1_6 (sm_v1_5 + half-time clear + opposite 2nd kickoff).
+Default path = compliant sm_v1_7 (sm_v1_6 + Vidal-Codina gain on visible frames only).
 sm_v1_5 = sm_v1_3 + missing-ball H/A (backdate + gap-bridge mid; Smart Tagging off).
 Optional --vc-possession: candidate team is a Vidal-Codina validated gain
 (direction or speed change inside the possession zone), not nearest-player.
@@ -36,6 +36,7 @@ from load_smart_tagging import KICKOFF_VIDEO_FRAMES
 from vc_possession import (
     DEFAULT_BA_THRESHOLD_DEG,
     DEFAULT_BV_THRESHOLD_M_S,
+    reappearance_angles,
     team_possession_from_zones,
 )
 
@@ -61,6 +62,16 @@ DEFAULT_HALF_KICKOFF_RESET = True      # clear at HT; D pre-2nd KO; seed opposit
 DEFAULT_USE_VC_POSSESSION = False       # Vidal-Codina gain as cand; off until it beats v1.5
 DEFAULT_VC_BV_THRESHOLD = DEFAULT_BV_THRESHOLD_M_S
 DEFAULT_VC_BA_THRESHOLD_DEG = DEFAULT_BA_THRESHOLD_DEG
+# off: path-change required on every visible frame.
+# reappear: for one control window after a live gap, a nearby team that disagrees
+#           with the pre-gap team can switch without a path change, so gap-bridge
+#           can place that switch in the dark.
+# edge: same window, and only when the ball direction also turns across the gap.
+DEFAULT_VC_GAP = "off"
+_VC_GAPS = ("off", "reappear", "edge")
+# Visible frames use the possession-zone gain; missing frames stay on sm_v1_5/6.
+# Kept: Metrica spellF1 and hidden-frame accuracy beat sm_v1_5 on both games.
+DEFAULT_VC_SPLICE = True
 
 
 def graded_mask(n_frames, game=GAME):
@@ -150,6 +161,7 @@ def label_possession(
     use_vc_possession=DEFAULT_USE_VC_POSSESSION,
     vc_bv_threshold=DEFAULT_VC_BV_THRESHOLD,
     vc_ba_threshold_deg=DEFAULT_VC_BA_THRESHOLD_DEG,
+    vc_gap=DEFAULT_VC_GAP,
 ):
     """Return length-n array of 'H'/'A'/'D'/'X'.
 
@@ -162,6 +174,9 @@ def label_possession(
              seed opposite of first-half kickoff team at published 2nd kickoff frame.
     vc: use_vc_possession replaces nearest/majority cand with a Vidal-Codina team
         gain (possession zone + ball-path change). Duel and fly-by do not switch.
+    vc_gap: off | reappear | edge. reappear lets the nearby team open a switch
+        in the control window after a live missing gap. edge also requires the
+        ball direction to change across that gap. Zone radius stays 1 m.
 
     graded: optional bool mask; default = BAR-ATH half video blocks. External
     games pass an all-True (or period) mask so graded_mask(game) is not used.
@@ -215,6 +230,15 @@ def label_possession(
             bv_threshold=vc_bv_threshold,
             ba_threshold_deg=vc_ba_threshold_deg,
         )
+    vc_gap_mode = (vc_gap or "off").lower()
+    if vc_gap_mode not in _VC_GAPS:
+        raise ValueError("vc_gap must be off|reappear|edge, got {!r}".format(vc_gap))
+    if vc_gap_mode != "off" and not use_vc_possession:
+        vc_gap_mode = "off"
+    edge_angles = None
+    if vc_gap_mode == "edge":
+        edge_angles = reappearance_angles(
+            features["ball_x_m"], features["ball_y_m"], ball_present)
     sp_dead = None
     if set_piece_dead is not None:
         sp_dead = np.asarray(set_piece_dead, dtype=bool)
@@ -253,6 +277,28 @@ def label_possession(
     still_edge_streak = 0
     use_edge = (missing_near_edge_frames > 0) or (still_near_edge_frames > 0)
     use_long_gap = int(long_gap_dead_frames) > 0
+    live_missing = 0
+    reappear_left = 0
+    team_before_gap = None
+    edge_switch = False
+
+    def _nearby_team(frame):
+        """sm_v1_5 candidate: nearest, majority if the duel is contested."""
+        cand_n = int(nearest_team[frame])
+        dist_n = nearest_dist[frame]
+        if (use_majority_near and majority_team is not None
+                and min_dist_home is not None and min_dist_away is not None):
+            maj = int(majority_team[frame])
+            if maj != NOBODY and maj != cand_n:
+                dh = min_dist_home[frame]
+                da = min_dist_away[frame]
+                if (not np.isnan(dh) and not np.isnan(da)
+                        and abs(float(dh) - float(da)) <= contest_dist_m):
+                    cand_n = maj
+                    dist_n = dh if cand_n == HOME else da
+        if (cand_n == NOBODY or dist_n != dist_n or float(dist_n) > control_dist_m):
+            return NOBODY
+        return cand_n
 
     for i in range(n):
         if not graded[i]:
@@ -262,6 +308,8 @@ def label_possession(
             pending_start = -1
             missing_streak = 0
             still_edge_streak = 0
+            live_missing = 0
+            reappear_left = 0
             if use_kickoff:
                 last_live = None
             continue
@@ -276,6 +324,8 @@ def label_possession(
             last_live = None
             missing_streak = 0
             still_edge_streak = 0
+            live_missing = 0
+            reappear_left = 0
             continue
 
         # Seed opposite of first-half kickoff team at 2nd kickoff frame
@@ -288,6 +338,8 @@ def label_possession(
             pending_start = -1
             missing_streak = 0
             still_edge_streak = 0
+            live_missing = 0
+            reappear_left = 0
             continue
 
         if use_edge and ball_present[i]:
@@ -340,9 +392,13 @@ def label_possession(
             pending_start = -1
             if not keep_last_live_on_dead:
                 last_live = None
+            live_missing = 0
+            reappear_left = 0
             continue
 
         if not ball_present[i]:
+            live_missing += 1
+            reappear_left = 0
             if last_live is None:
                 labels[i] = LABEL_X
             else:
@@ -356,6 +412,26 @@ def label_possession(
             # Validated gain already means control. NOBODY = loose, duel, or fly-by.
             cand = int(vc_team[i])
             dist = 0.0 if cand != NOBODY else np.nan
+            if live_missing > 0 and vc_gap_mode != "off":
+                team_before_gap = last_live
+                reappear_left = control_frames if control_frames > 0 else 1
+                edge_switch = vc_gap_mode == "reappear"
+                if vc_gap_mode == "edge":
+                    ang = float(edge_angles[i])
+                    edge_switch = ang == ang and ang > float(vc_ba_threshold_deg)
+                live_missing = 0
+            if reappear_left > 0 and edge_switch and team_before_gap is not None:
+                reappear_left -= 1
+                near = _nearby_team(i)
+                # Path-change stays in force when the nearby team is the one
+                # that already had the ball. A different nearby team may open
+                # the switch so gap-bridge can place it inside the dark gap.
+                if near != NOBODY and near != team_before_gap:
+                    cand = near
+                    dist = 0.0
+            elif reappear_left > 0:
+                reappear_left -= 1
+                live_missing = 0
         else:
             cand = int(nearest_team[i])
             dist = nearest_dist[i]
@@ -528,6 +604,38 @@ def _merge_short_spells(labels, graded, min_frames):
     return out
 
 
+def splice_vc_on_visible(features, graded=None, game=None, merge_after=True, **kwargs):
+    """Vidal-Codina label where the ball is visible; kwargs model where it is not.
+
+    kwargs are the surrounding rules (sm_v1_5 or sm_v1_6). The visible pass forces
+    the possession-zone gain and leaves the gap-edge modes off. Missing frames,
+    including the way the base model fills a dark gap, are copied from the base
+    pass. merge_after runs the short-spell merge once on the joined row.
+    """
+    if game is None:
+        game = kwargs.pop("game", GAME)
+    else:
+        kwargs.pop("game", None)
+    if graded is None:
+        graded = graded_mask(int(features["n_frames"]), game)
+    base_kw = dict(kwargs)
+    base_kw.pop("vc_splice", None)
+    base_kw["use_vc_possession"] = False
+    base_kw["vc_gap"] = "off"
+    vc_kw = dict(base_kw)
+    vc_kw["use_vc_possession"] = True
+    base = label_possession(features, game=game, graded=graded, **base_kw)
+    vc = label_possession(features, game=game, graded=graded, **vc_kw)
+    present = np.asarray(features["ball_present"], dtype=bool)
+    out = np.array(base, copy=True)
+    out[present] = np.asarray(vc)[present]
+    if merge_after:
+        min_spell = int(base_kw.get("min_spell_frames", DEFAULT_MIN_SPELL_FRAMES))
+        if min_spell > 1:
+            out = _merge_short_spells(out, np.asarray(graded, dtype=bool), min_spell)
+    return out
+
+
 def params_dict(
     control_frames=DEFAULT_CONTROL_FRAMES,
     control_dist_m=DEFAULT_CONTROL_DIST_M,
@@ -548,6 +656,7 @@ def params_dict(
     use_vc_possession=DEFAULT_USE_VC_POSSESSION,
     vc_bv_threshold=DEFAULT_VC_BV_THRESHOLD,
     vc_ba_threshold_deg=DEFAULT_VC_BA_THRESHOLD_DEG,
+    vc_gap=DEFAULT_VC_GAP,
 ):
     return {
         "control_frames": control_frames,
@@ -569,4 +678,5 @@ def params_dict(
         "use_vc_possession": use_vc_possession,
         "vc_bv_threshold": vc_bv_threshold,
         "vc_ba_threshold_deg": vc_ba_threshold_deg,
+        "vc_gap": vc_gap,
     }

@@ -106,10 +106,16 @@ Features (tactical ATD): ball present, position, nearest team and distance (m), 
 - Long-gap → D was A/B'd externally and **dropped** (hurt hidden-frame team accuracy).
 - Chosen on Metrica Sample_Game_1/2 only; BAR-ATH used for non-GT structure vs sm_v1_3 + smooth50. Rollback: `--no-backdate-switch --gap-bridge off`.
 
-**Compliant `sm_v1_6` (default; builds on sm_v1_5):**
+**Compliant `sm_v1_6` (builds on sm_v1_5):**
 - **Half-kickoff reset** (`--half-kickoff-reset`): clear `last_live` on ungraded (halftime); graded half-2 frames before published 2nd kickoff (`KICKOFF_VIDEO_FRAMES["2nd Half"]`, FAQ/DATA) → **D**; at that frame seed `last_live` = opposite of first locked team in half 1 (Laws: other team kicks off 2nd half).
 - Half-1 cold-start X unchanged (live after kickoff, nobody close yet).
 - Rollback: `--no-half-kickoff-reset`.
+
+**Compliant `sm_v1_7` (default; builds on sm_v1_6):**
+- Two passes. Where the ball coordinate is present, the candidate is a Vidal-Codina gain (possession zone 1.0 m, duel zone 1.0 m; direction change > 10° or speed change > 5 m/s). A duel or a straight fly-by does not switch the team.
+- Where the ball is missing, the label is the `sm_v1_6` label, including gap-bridge mid.
+- One short-spell merge on the joined row.
+- Chosen on Metrica against `sm_v1_5`: spellF1 0.370→0.429 and hidden-frame team accuracy 0.510→0.512, both games. Plain VC without the splice lost hidden-frame accuracy and is not the default. Rollback: `--no-vc-splice`.
 
 One command: `predict_v1.bat` / `predict_v1.sh` (writes next `sm_v*`, validates, optional score log).
 
@@ -123,6 +129,7 @@ Aggregate (mean over 2 games × 5 dropouts):
 |-----------|---------|------------------------|
 | sm_v1_3 | 0.3141 | 0.5052 |
 | **sm_v1_5** (mid + backdate) | **0.3701** | **0.5102** |
+| **sm_v1_7 splice** (VC visible, v1.5 missing) | **0.4286** | **0.5117** |
 | smooth50-equivalent | 0.3210 | 0.1528 |
 
 Leave-one-game-out: sm_v1_5 beat sm_v1_3 on both Sample_Game_1 and Sample_Game_2. Literature: Link & Hoernig, *Individual ball possession in soccer*, PLOS ONE 2017.
@@ -133,7 +140,7 @@ Leave-one-game-out: sm_v1_5 beat sm_v1_3 on both Sample_Game_1 and Sample_Game_2
 
 _Owner: E1_
 
-- Ball missing (~41% graded): **Hold** last live team; sm_v1_5+ may **retime** the H/A switch inside a gap (gap-bridge mid) and backdates pending once control confirms. `X` mainly kickoff cold-start / never established, or ungraded. sm_v1_6 clears `last_live` at half-time so half 2 does not inherit half 1.
+- Ball missing (~41% graded): the `sm_v1_6` label, which holds the last live team and may retime an H/A switch inside a gap (gap-bridge mid). Visible frames use the possession-zone gain (`sm_v1_7`). `X` mainly kickoff cold-start / never established, or ungraded. Half-time still clears `last_live`.
 - No player IDs: team-collective nearest + cluster majority in the control circle (sm_v1_3).
 - Dead-ball: out-of-pitch always; sm_v1_1+ near-edge missing/still; sm_v1_6 D on half-2 graded frames before published 2nd kickoff. Soft SET PIECES archived (`--smart-tagging`).
 - Smart Tagging: **off** in sm_v1_6 default; phase votes off. Kickoff frames come from published constants (FAQ/DATA), not ST XML.

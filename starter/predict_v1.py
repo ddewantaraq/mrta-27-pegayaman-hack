@@ -8,10 +8,9 @@ By default writes the next auto-incremented file under evaluation/results/:
 Pass --out PATH to force a path and skip auto-versioning.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v1_6 (sm_v1_5 + half-time clear, D before 2nd
-kickoff, seed opposite kickoff team). sm_v1_5: backdate + gap-bridge mid;
-Smart Tagging off. Archive sm_v1_4: --smart-tagging. Rollback kickoff:
---no-half-kickoff-reset.
+Defaults = compliant sm_v1_7 (sm_v1_6 + Vidal-Codina gain where the ball is
+visible; sm_v1_6 labels where it is missing). Rollback splice:
+--no-vc-splice. Rollback kickoff: --no-half-kickoff-reset.
 """
 
 from __future__ import print_function
@@ -62,8 +61,11 @@ from state_machine import (  # noqa: E402
     DEFAULT_USE_VC_POSSESSION,
     DEFAULT_VC_BA_THRESHOLD_DEG,
     DEFAULT_VC_BV_THRESHOLD,
+    DEFAULT_VC_GAP,
+    DEFAULT_VC_SPLICE,
     label_possession,
     params_dict,
+    splice_vc_on_visible,
 )
 
 RESULTS_DIR = os.path.join(ROOT, "evaluation", "results")
@@ -270,6 +272,25 @@ def main():
     parser.add_argument("--vc-ba-threshold-deg", type=float,
                         default=DEFAULT_VC_BA_THRESHOLD_DEG,
                         help="degrees of ball-direction change that counts as a gain")
+    parser.add_argument(
+        "--vc-gap",
+        choices=("off", "reappear", "edge"),
+        default=DEFAULT_VC_GAP,
+        help="after a live gap: off, nearby-team reappear, or reappear plus direction change",
+    )
+    parser.add_argument(
+        "--vc-splice",
+        dest="vc_splice",
+        action="store_true",
+        default=DEFAULT_VC_SPLICE,
+        help="VC label on visible frames, base model on missing frames (sm_v1_7)",
+    )
+    parser.add_argument(
+        "--no-vc-splice",
+        dest="vc_splice",
+        action="store_false",
+        help="one state machine only (sm_v1_6 when kickoff reset is on)",
+    )
     args = parser.parse_args()
 
     version = None
@@ -322,14 +343,15 @@ def main():
         use_vc_possession=args.use_vc_possession,
         vc_bv_threshold=args.vc_bv_threshold,
         vc_ba_threshold_deg=args.vc_ba_threshold_deg,
+        vc_gap=args.vc_gap,
     )
+    params["vc_splice"] = args.vc_splice
     print("state_machine params: {}".format(params))
     print("pz_radius_m: {}  dz_radius_m: {}".format(
         args.pz_radius_m, args.dz_radius_m))
     print("cluster_radius_m: {}".format(args.cluster_radius_m))
 
-    labels = label_possession(
-        features,
+    label_kwargs = dict(
         game=args.game,
         control_frames=args.control_frames,
         control_dist_m=args.control_dist_m,
@@ -349,7 +371,12 @@ def main():
         use_vc_possession=args.use_vc_possession,
         vc_bv_threshold=args.vc_bv_threshold,
         vc_ba_threshold_deg=args.vc_ba_threshold_deg,
+        vc_gap=args.vc_gap,
     )
+    if args.vc_splice:
+        labels = splice_vc_on_visible(features, **label_kwargs)
+    else:
+        labels = label_possession(features, **label_kwargs)
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
     rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
