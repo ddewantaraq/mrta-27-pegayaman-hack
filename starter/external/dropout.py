@@ -34,11 +34,20 @@ def apply_dropout(features, hide_mask):
             arr = np.asarray(out[key], dtype=np.float64).copy()
             arr[hide] = np.nan
             out[key] = arr
-    for key in ("nearest_team", "majority_team", "n_near_home", "n_near_away"):
+    for key in ("nearest_team", "majority_team", "pz_team",
+                "n_near_home", "n_near_away"):
         if key in out and out[key] is not None:
             arr = np.asarray(out[key]).copy()
             arr[hide] = -1 if key.endswith("team") else 0
             out[key] = arr
+    if out.get("pz_player") is not None:
+        arr = np.asarray(out["pz_player"]).copy()
+        arr[hide] = -1
+        out["pz_player"] = arr
+    if out.get("pz_duel") is not None:
+        arr = np.asarray(out["pz_duel"], dtype=bool).copy()
+        arr[hide] = False
+        out["pz_duel"] = arr
     return out
 
 

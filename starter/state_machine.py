@@ -2,6 +2,9 @@
 
 Default path = compliant sm_v1_6 (sm_v1_5 + half-time clear + opposite 2nd kickoff).
 sm_v1_5 = sm_v1_3 + missing-ball H/A (backdate + gap-bridge mid; Smart Tagging off).
+Optional --vc-possession: candidate team is a Vidal-Codina validated gain
+(direction or speed change inside the possession zone), not nearest-player.
+Off by default until it beats sm_v1_5 on external games.
 sm_v1_4 = sm_v1_3 + missing-aware soft SET PIECES -> D (archived; --smart-tagging).
 sm_v1_3 = sm_v1_2 + contested majority-near-ball override of nearest.
 sm_v1_2 = sm_v1_1 + establish-without-X + min_spell 18.
@@ -12,6 +15,8 @@ Rules encoded (see CHALLENGE.md / team TECH_DOC):
   - Ball missing != dead: hold last H/A (or X if never set), unless soft set-piece prior
   - Live ball with close nearest while establishing -> H/A (not X); lock after control_frames
   - Contested duel: if majority in control circle disagrees with nearest, trust majority
+  - Optional Vidal-Codina cand: gain = possession-zone contact whose ball path changes;
+    a duel or a straight fly-by is not a gain, so the last team keeps the ball
   - Switch team only after N consecutive opposing cand + distance threshold (control)
   - Optional backdate of pending frames once a switch confirms (Link & Hoernig)
   - Optional gap-bridge: when team after a live missing gap differs from before, place
@@ -28,6 +33,11 @@ import numpy as np
 
 from games import GAME, half_video_blocks
 from load_smart_tagging import KICKOFF_VIDEO_FRAMES
+from vc_possession import (
+    DEFAULT_BA_THRESHOLD_DEG,
+    DEFAULT_BV_THRESHOLD_M_S,
+    team_possession_from_zones,
+)
 
 HOME, AWAY, NOBODY = 0, 1, -1
 LABEL_H, LABEL_A, LABEL_D, LABEL_X = "H", "A", "D", "X"
@@ -48,6 +58,9 @@ DEFAULT_BACKDATE_SWITCH = True         # external winner: backdate pending on co
 DEFAULT_GAP_BRIDGE = "mid"             # external winner: switch at mid of live missing gap
 DEFAULT_LONG_GAP_DEAD_FRAMES = 0       # C dropped (hurt hidden-frame team acc)
 DEFAULT_HALF_KICKOFF_RESET = True      # clear at HT; D pre-2nd KO; seed opposite team
+DEFAULT_USE_VC_POSSESSION = False       # Vidal-Codina gain as cand; off until it beats v1.5
+DEFAULT_VC_BV_THRESHOLD = DEFAULT_BV_THRESHOLD_M_S
+DEFAULT_VC_BA_THRESHOLD_DEG = DEFAULT_BA_THRESHOLD_DEG
 
 
 def graded_mask(n_frames, game=GAME):
@@ -134,6 +147,9 @@ def label_possession(
     long_gap_dead_frames=DEFAULT_LONG_GAP_DEAD_FRAMES,
     half_kickoff_reset=DEFAULT_HALF_KICKOFF_RESET,
     kickoff_frames=None,
+    use_vc_possession=DEFAULT_USE_VC_POSSESSION,
+    vc_bv_threshold=DEFAULT_VC_BV_THRESHOLD,
+    vc_ba_threshold_deg=DEFAULT_VC_BA_THRESHOLD_DEG,
 ):
     """Return length-n array of 'H'/'A'/'D'/'X'.
 
@@ -144,6 +160,8 @@ def label_possession(
     sm_v1_5: optional backdate_switch / gap_bridge / long_gap_dead (external-chosen).
     sm_v1_6: half_kickoff_reset — clear last_live on ungraded; D before 2nd kickoff;
              seed opposite of first-half kickoff team at published 2nd kickoff frame.
+    vc: use_vc_possession replaces nearest/majority cand with a Vidal-Codina team
+        gain (possession zone + ball-path change). Duel and fly-by do not switch.
 
     graded: optional bool mask; default = BAR-ATH half video blocks. External
     games pass an all-True (or period) mask so graded_mask(game) is not used.
@@ -169,10 +187,34 @@ def label_possession(
     bspeed = features.get("ball_speed")
     can_majority = (
         use_majority_near
+        and not use_vc_possession
         and majority_team is not None
         and min_dist_home is not None
         and min_dist_away is not None
     )
+    vc_team = None
+    if use_vc_possession:
+        if "pz_player" not in features or "pz_team" not in features:
+            raise ValueError(
+                "use_vc_possession requires pz_player and pz_team on features")
+        reset = ~graded
+        period = features.get("period")
+        if period is not None:
+            period = np.asarray(period)
+            if len(period) == n:
+                changed = np.zeros(n, dtype=bool)
+                changed[1:] = period[1:] != period[:-1]
+                reset = np.logical_or(reset, changed)
+        vc_team = team_possession_from_zones(
+            features["pz_player"],
+            features["pz_team"],
+            features["ball_x_m"],
+            features["ball_y_m"],
+            ball_present,
+            reset_mask=reset,
+            bv_threshold=vc_bv_threshold,
+            ba_threshold_deg=vc_ba_threshold_deg,
+        )
     sp_dead = None
     if set_piece_dead is not None:
         sp_dead = np.asarray(set_piece_dead, dtype=bool)
@@ -310,8 +352,13 @@ def label_possession(
             pending_start = -1
             continue
 
-        cand = int(nearest_team[i])
-        dist = nearest_dist[i]
+        if use_vc_possession:
+            # Validated gain already means control. NOBODY = loose, duel, or fly-by.
+            cand = int(vc_team[i])
+            dist = 0.0 if cand != NOBODY else np.nan
+        else:
+            cand = int(nearest_team[i])
+            dist = nearest_dist[i]
         if can_majority:
             maj = int(majority_team[i])
             if maj != NOBODY and maj != cand:
@@ -498,6 +545,9 @@ def params_dict(
     gap_bridge=DEFAULT_GAP_BRIDGE,
     long_gap_dead_frames=DEFAULT_LONG_GAP_DEAD_FRAMES,
     half_kickoff_reset=DEFAULT_HALF_KICKOFF_RESET,
+    use_vc_possession=DEFAULT_USE_VC_POSSESSION,
+    vc_bv_threshold=DEFAULT_VC_BV_THRESHOLD,
+    vc_ba_threshold_deg=DEFAULT_VC_BA_THRESHOLD_DEG,
 ):
     return {
         "control_frames": control_frames,
@@ -516,4 +566,7 @@ def params_dict(
         "gap_bridge": gap_bridge,
         "long_gap_dead_frames": long_gap_dead_frames,
         "half_kickoff_reset": half_kickoff_reset,
+        "use_vc_possession": use_vc_possession,
+        "vc_bv_threshold": vc_bv_threshold,
+        "vc_ba_threshold_deg": vc_ba_threshold_deg,
     }

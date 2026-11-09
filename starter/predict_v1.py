@@ -34,6 +34,10 @@ from features import (  # noqa: E402
     extract_features,
     summarize,
 )
+from vc_possession import (  # noqa: E402
+    DEFAULT_DZ_RADIUS_M,
+    DEFAULT_PZ_RADIUS_M,
+)
 from smart_priors import (  # noqa: E402
     DEFAULT_SET_PIECE_DEAD_CAP_FRAMES,
     build_smart_priors,
@@ -55,6 +59,9 @@ from state_machine import (  # noqa: E402
     DEFAULT_STILL_SPEED_M,
     DEFAULT_USE_MAJORITY_NEAR,
     DEFAULT_USE_SMART_TAGGING,
+    DEFAULT_USE_VC_POSSESSION,
+    DEFAULT_VC_BA_THRESHOLD_DEG,
+    DEFAULT_VC_BV_THRESHOLD,
     label_possession,
     params_dict,
 )
@@ -241,6 +248,28 @@ def main():
         action="store_false",
         help="disable half-kickoff reset (sm_v1_5 path)",
     )
+    parser.add_argument(
+        "--vc-possession",
+        dest="use_vc_possession",
+        action="store_true",
+        default=DEFAULT_USE_VC_POSSESSION,
+        help="Vidal-Codina gain as the control candidate (off unless it beats v1.5)",
+    )
+    parser.add_argument(
+        "--no-vc-possession",
+        dest="use_vc_possession",
+        action="store_false",
+        help="nearest / majority candidate (sm_v1_6 default)",
+    )
+    parser.add_argument("--pz-radius-m", type=float, default=DEFAULT_PZ_RADIUS_M,
+                        help="Vidal-Codina possession-zone radius in metres")
+    parser.add_argument("--dz-radius-m", type=float, default=DEFAULT_DZ_RADIUS_M,
+                        help="Vidal-Codina duel-zone radius in metres")
+    parser.add_argument("--vc-bv-threshold", type=float, default=DEFAULT_VC_BV_THRESHOLD,
+                        help="m/s ball-speed change that counts as a gain")
+    parser.add_argument("--vc-ba-threshold-deg", type=float,
+                        default=DEFAULT_VC_BA_THRESHOLD_DEG,
+                        help="degrees of ball-direction change that counts as a gain")
     args = parser.parse_args()
 
     version = None
@@ -253,7 +282,11 @@ def main():
 
     print("T20 extract_features ...")
     features = extract_features(
-        game=args.game, cluster_radius_m=args.cluster_radius_m)
+        game=args.game,
+        cluster_radius_m=args.cluster_radius_m,
+        pz_radius_m=args.pz_radius_m,
+        dz_radius_m=args.dz_radius_m,
+    )
     summarize(features)
 
     set_piece_dead = None
@@ -286,8 +319,13 @@ def main():
         gap_bridge=args.gap_bridge,
         long_gap_dead_frames=args.long_gap_dead_frames,
         half_kickoff_reset=args.half_kickoff_reset,
+        use_vc_possession=args.use_vc_possession,
+        vc_bv_threshold=args.vc_bv_threshold,
+        vc_ba_threshold_deg=args.vc_ba_threshold_deg,
     )
     print("state_machine params: {}".format(params))
+    print("pz_radius_m: {}  dz_radius_m: {}".format(
+        args.pz_radius_m, args.dz_radius_m))
     print("cluster_radius_m: {}".format(args.cluster_radius_m))
 
     labels = label_possession(
@@ -308,6 +346,9 @@ def main():
         gap_bridge=args.gap_bridge,
         long_gap_dead_frames=args.long_gap_dead_frames,
         half_kickoff_reset=args.half_kickoff_reset,
+        use_vc_possession=args.use_vc_possession,
+        vc_bv_threshold=args.vc_bv_threshold,
+        vc_ba_threshold_deg=args.vc_ba_threshold_deg,
     )
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
