@@ -27,12 +27,15 @@ if errorlevel 1 (
   exit /b 1
 )
 
-echo === score ===
-call python evaluation\run_evaluation.py
+echo === assess Track A + Track B ===
+set "ASSESS_EXTRA="
+if /I "%~1"=="--public-log" set "ASSESS_EXTRA=--public-log"
+if /I "%PUBLIC_LOG%"=="1" set "ASSESS_EXTRA=--public-log"
+call python starter\assess.py --cand "%SUBMISSION%" %ASSESS_EXTRA%
 if errorlevel 1 (
-  echo FAIL  score
+  echo FAIL  assess
   exit /b 1
 )
 
-echo OK  predicted, validated, and scored %SUBMISSION%
+echo OK  predicted, validated, and assessed %SUBMISSION%
 exit /b 0

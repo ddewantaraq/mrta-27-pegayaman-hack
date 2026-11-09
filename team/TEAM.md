@@ -85,14 +85,15 @@ Public 5-minute GT: **one-off pipeline check** (validate + scorer runs) only. **
 
 ### How we assess (different from the Oct public-GT era)
 
-Keep/drop a change using **rule/physics citation** plus **local non-GT CSV structure** — not public spellF1. For missing-ball H/A correctness we also use **licensed external games** (Metrica sample-data).
+**One command:** `bash assess.sh <cand.csv>` (or `predict_v1.sh` after predict). Full write-up: [../docs/ASSESS.md](../docs/ASSESS.md).
 
-1. **Vs prior compliant CSV** (now `sm_v1_5` / `sm_v1_6`; sm_v1_3 remains a strong structure baseline; sm_v1_4 archived): graded X, X-after-D, short H/A islands (&lt;12f / &lt;25f), n_spells, mean spell duration.
-2. **Vs `evaluation/results/baseline_smooth50.csv`** as the **floor structure reference** (same metrics on graded halves). Prefer fewer short islands and longer mean spell duration than smooth50 where possible. Graded X may still be &gt; 0 (smooth50 never abstains); that alone is not a fail.
-3. **External games (correctness):** Metrica Sample_Game_1/2 with event-derived labels + synthetic ball dropout. Choose missing-ball rules only if they beat sm_v1_3 on external spellF1 and hidden-frame team accuracy (leave-one-game-out). Never use BAR-ATH GT / hand labels.
-4. **Public scorer once** → RESULTS log only. Never the keep driver.
+Keep/drop using **rule/physics citation** — not public spellF1.
 
-Oct process (iterate until public board / GT 17 poss moved) is archived. See [RESULTS.md](RESULTS.md).
+1. **Track A — structure:** vs prior compliant CSV + `baseline_smooth50.csv`: short H/A &lt;12f/&lt;25f, n_spells, mean duration, graded X/D.
+2. **Track B — H/A:** Metrica Sample_Game_1/2 + dropouts; external spellF1 (same `possession_metrics` as the challenge) + hidden-frame team accuracy. Team/missing-ball changes must beat the reference on both, both games.
+3. **Public scorer** → optional `--public-log` only. Never the keep driver.
+
+Algorithm notes: [../docs/algorithms/](../docs/algorithms/). Oct public-GT keep/drop is archived. See [RESULTS.md](RESULTS.md).
 
 ---
 

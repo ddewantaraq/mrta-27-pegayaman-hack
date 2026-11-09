@@ -339,6 +339,7 @@ def evaluate_vc_splice(root):
         cands = (
             ("sm_v1_5", sm_v1_5_kwargs()),
             ("vc_splice", splice_kw),
+            ("smooth50", None),
         )
         for drop_name, hide_mask in drops:
             print("  {}".format(drop_name), flush=True)
