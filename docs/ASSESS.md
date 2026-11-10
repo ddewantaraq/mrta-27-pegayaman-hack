@@ -8,7 +8,7 @@ We do **not** keep/drop from the public 5-minute board. Run both tracks when jud
 
 Compare the candidate CSV to:
 
-1. **Latest reference** (default `evaluation/results/sm_v1_6_compliant.csv`)
+1. **Latest reference** (default `evaluation/results/sm_v1_7_compliant.csv`; pass `--ref` to compare a newer cand against it)
 2. **`baseline_smooth50.csv`**
 
 Metrics: `n_spells`, mean spell duration (s), short H/A **&lt;12f** / **&lt;25f**, graded D / X.

@@ -97,18 +97,25 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork includes a possession **state machine** over tactical ATD.
-**Active code default:** compliant **`sm_v1_7`** (Vidal-Codina on visible + sm_v1_6 on missing). Rollback → `sm_v1_6`.
+**Active / forward path:** compliant **`sm_v1_7`** (Vidal-Codina on visible + sm_v1_6 on missing). Artifact: `evaluation/results/sm_v1_7_compliant.csv`. Rollback → `sm_v1_6`.
 We do **not** tune parameters on the public possession ground truth (organiser clarification).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # once; keep activated
 pip install -r requirements.txt
 # unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
-bash predict_v1.sh          # predict → validate → assess (Track A + B)
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv   # re-assess only
+
+# Fixed compliant filename (recommended):
+python starter/predict_v1.py --out evaluation/results/sm_v1_7_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v1_7_compliant.csv
+bash assess.sh evaluation/results/sm_v1_7_compliant.csv   # Track A + B
+
+# Or one-shot auto-increment sm_v*.csv then assess:
+bash predict_v1.sh            # Mac / Linux / Git Bash
+# predict_v1.bat              # Windows CMD
 ```
 
-`predict_v1.sh` picks `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`.
+`predict_v1.sh` / `assess.sh` pick `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`. Windows: `predict_v1.bat` / `assess.bat`.
 
 **Assess ritual:** [docs/ASSESS.md](docs/ASSESS.md) · **How-to:** [team/README.md](team/README.md) ·  
 Rules: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) · Scores: [team/RESULTS.md](team/RESULTS.md) · Algorithms: [docs/algorithms/](docs/algorithms/)

@@ -4,7 +4,7 @@
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** restored **`sm_v1`** → … → **`sm_v1_3`** → **`sm_v1_5`** → **`sm_v1_6`** (half-time clear + opposite 2nd kickoff). **`sm_v1_4`** soft ST is archived.
+- **Forward path:** restored **`sm_v1`** → … → **`sm_v1_3`** → **`sm_v1_5`** → **`sm_v1_6`** → **`sm_v1_7`** (VC on visible + sm_v1_6 on missing; artifact `sm_v1_7_compliant.csv`). **`sm_v1_4`** soft ST is archived.
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process.
 - **How we assess (not Oct):** two tracks via `assess.sh` — **A** local structure vs prior + **`baseline_smooth50.csv`**; **B** Metrica H/A (external spellF1 + hidden). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
@@ -41,7 +41,7 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-07 | sm_v1_4_compliant | E1 | 0.6189 | 0.3043 | 29 | 8.9 | Compliant soft ST; ≠ Oct archive sm_v1_4; log only; later archived vs sm_v1_3 structure |
 | 2026-11-07 | sm_v1_5_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Compliant missing-ball H/A (Metrica external); ≠ Oct archive sm_v1_5; log only |
 | 2026-11-08 | sm_v1_6_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Half-kickoff reset; ≠ Oct archive; log only |
-| 2026-11-09 | sm_v1_7_compliant | E1 | 0.6090 | 0.3238 | 25 | 10.4 | sm_v1_7 (VC visible + sm_v1_6 missing); ≠ Oct archive; log only; forward path still sm_v1_6 |
+| 2026-11-09 | sm_v1_7_compliant | E1 | 0.6090 | 0.3238 | 25 | 10.4 | Active forward path; ≠ Oct archive; public numbers log only |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.
@@ -74,7 +74,7 @@ Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are log
 | 2026-11-07 | Compliant sm_v1_4 (T26): missing-aware soft SET PIECES→D; `sm_v1_4_compliant.csv`. Explained missing (D∩soft ST prior) 10.7%→21.7% of graded missing; graded D↑; n_spells 428→456; mean dur 11.73→10.33; short&lt;12f 6→10. ≠ Oct archive sm_v1_4. |
 | 2026-11-07 | Compliant sm_v1_5 (T28): backdate-switch + gap-bridge mid on sm_v1_3 base; Smart Tagging off. External Metrica: mean spellF1 0.314→0.370, hidden-frame team acc 0.505→0.510; LOGO both games. Local vs sm_v1_3: n_spells 428→421; mean dur 11.73→11.92; short&lt;25f 24→16; X/D flat. ≠ Oct archive sm_v1_5. |
 | 2026-11-08 | Compliant sm_v1_6 (T29): clear last_live at HT; D on half-2 graded before published 2nd KO (113742); seed opposite of 1st KO team. Local vs sm_v1_5: D 33212→35660; n_sp 421→416; mean 11.92→11.83; s12/s25/X flat; ≪ smooth50. Sanity: 1st live A → 2nd KO H. |
-| 2026-11-09 | `sm_v1_7_compliant.csv` on `newrules#1` (VC on visible + sm_v1_6 on missing + half-kickoff-reset). Oct `sm_v1_7.csv` archive-only, **not from this branch**. Local vs sm_v1_6: n_sp 416→406; mean 11.83→12.11; s12 6→4; s25 16→11; D flat 35660; X 177→281; ≪ smooth50. Assess: [../docs/ASSESS.md](../docs/ASSESS.md). Forward path note: still sm_v1_6 in RESULTS header until promoted. |
+| 2026-11-09 | `sm_v1_7_compliant.csv` on `newrules#1` (VC on visible + sm_v1_6 on missing + half-kickoff-reset). Oct `sm_v1_7.csv` archive-only, **not from this branch**. Local vs sm_v1_6: n_sp 416→406; mean 11.83→12.11; s12 6→4; s25 16→11; D flat 35660; X 177→281; ≪ smooth50. Metrica: spellF1 0.429 / hidden 0.512 vs sm_v1_5. **Promoted** to forward path. Assess: [../docs/ASSESS.md](../docs/ASSESS.md). |
 
 ---
 
@@ -105,4 +105,4 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-08 | Compliant sm_v1_6: half-kickoff-reset (HT clear; D pre-2nd KO; seed opposite) | **yes (default)** | Laws of the Game: other team kicks off 2nd half; play dead until restart. Uses published `KICKOFF_VIDEO_FRAMES` (FAQ/DATA), not GT. Local vs sm_v1_5: pre-KO gap all D; short islands flat; mean dur 11.83; ≪ smooth50. Rollback: `--no-half-kickoff-reset`. |
 | 2026-11-09 | Vidal-Codina 2022 possession-zone gain as cand, on the sm_v1_5 rules | **no** | Paper §2.3; published radii only. Metrica spellF1↑ but hidden↓. Full table: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §1. |
 | 2026-11-09 | VC gap edges at pz=1.0 m: reappear / edge | **no** | SpellF1↑ hidden↓ both games. [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §2. |
-| 2026-11-09 | **sm_v1_7**: Vidal-Codina on visible frames; missing frames stay sm_v1_5 / sm_v1_6 | evidence (`sm_v1_7_compliant`) | Metrica vs sm_v1_5: spellF1 0.370→0.429, hidden 0.510→0.512, both games. Local vs sm_v1_6: spells 416→406, mean 11.83→12.11, short&lt;25f 16→11; ≪ smooth50. ≠ Oct archive `sm_v1_7.csv`. Rollback → `sm_v1_6`. [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §3. |
+| 2026-11-09 | **sm_v1_7**: Vidal-Codina on visible frames; missing frames stay sm_v1_5 / sm_v1_6 | **yes (default)** | Metrica vs sm_v1_5: spellF1 0.370→0.429, hidden 0.510→0.512, both games. Local vs sm_v1_6: spells 416→406, mean 11.83→12.11, short&lt;25f 16→11; ≪ smooth50. ≠ Oct archive `sm_v1_7.csv`. Rollback → `sm_v1_6`. [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §3. |

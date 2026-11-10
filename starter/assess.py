@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(HERE, "external"))
 from state_machine import graded_mask  # noqa: E402
 from vc_possession import live_structure  # noqa: E402
 
-DEFAULT_REF = os.path.join(ROOT, "evaluation", "results", "sm_v1_6_compliant.csv")
+DEFAULT_REF = os.path.join(ROOT, "evaluation", "results", "sm_v1_7_compliant.csv")
 DEFAULT_SMOOTH = os.path.join(ROOT, "evaluation", "results", "baseline_smooth50.csv")
 DEFAULT_METRICA_OUT = os.path.join(
     ROOT, "evaluation", "reports", "assess_metrica.csv")
@@ -130,7 +130,7 @@ def main(argv=None):
         help="candidate BAR-ATH submission CSV (Track A)")
     parser.add_argument(
         "--ref", default=DEFAULT_REF,
-        help="structure reference CSV (default sm_v1_6_compliant)")
+        help="structure reference CSV (default sm_v1_7_compliant)")
     parser.add_argument(
         "--smooth", default=DEFAULT_SMOOTH,
         help="smooth50 baseline CSV")
