@@ -1,4 +1,6 @@
 @echo off
+REM Predict -^> validate -^> assess. Auto out = next after evaluation\results\LATEST
+REM (bare sm_v*.csv; _compliant only if bare already exists). Does not update LATEST.
 setlocal
 cd /d "%~dp0"
 

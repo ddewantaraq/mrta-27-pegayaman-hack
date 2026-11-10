@@ -1,10 +1,13 @@
 """Dual-track assessment: local structure (A) + Metrica H/A (B).
 
-Track A — BAR-ATH CSV structure vs a reference compliant CSV and smooth50
-  (n_spells, mean duration, short <12f / <25f, D, X). No BAR-ATH GT.
+Both tracks: cand vs LATEST (approved best) vs smooth50.
+
+Track A — BAR-ATH CSV structure (n_spells, mean duration, short <12f / <25f,
+  D, X). No BAR-ATH GT.
 
 Track B — same challenge spellF1 code on Metrica event labels + dropouts,
-  plus hidden-frame team accuracy. Reports sm_v1_5 vs sm_v1_7 (maps harness id).
+  plus hidden-frame team accuracy. Re-runs kwargs for cand (code defaults)
+  and LATEST (version registry); does not score the BAR-ATH CSV on Metrica.
 
     .venv/bin/python starter/assess.py --cand evaluation/results/sm_v1_7_compliant.csv
     bash assess.sh evaluation/results/sm_v1_7_compliant.csv
@@ -26,10 +29,15 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(ROOT, "evaluation"))
 sys.path.insert(0, os.path.join(HERE, "external"))
 
+from model_latest import (  # noqa: E402
+    format_version_label,
+    latest_version,
+    parse_sm_version,
+    read_latest,
+)
 from state_machine import graded_mask  # noqa: E402
 from vc_possession import live_structure  # noqa: E402
 
-DEFAULT_REF = os.path.join(ROOT, "evaluation", "results", "sm_v1_7_compliant.csv")
 DEFAULT_SMOOTH = os.path.join(ROOT, "evaluation", "results", "baseline_smooth50.csv")
 DEFAULT_METRICA_OUT = os.path.join(
     ROOT, "evaluation", "reports", "assess_metrica.csv")
@@ -51,6 +59,7 @@ def _structure_row(path):
 
 def run_track_a(cand_path, ref_path, smooth_path):
     print("=== Track A: local structure (no BAR-ATH GT) ===")
+    print("cand vs LATEST vs smooth50")
     rows = []
     for path in (cand_path, ref_path, smooth_path):
         if not os.path.isfile(path):
@@ -68,34 +77,43 @@ def run_track_a(cand_path, ref_path, smooth_path):
             r["D"],
             r["X"],
         ))
-    print("Gate: prefer fewer s12/s25 and longer mean vs ref; clearly better than smooth50.")
+    print("Gate: prefer fewer s12/s25 and longer mean vs LATEST; clearly better than smooth50.")
     return rows
 
 
-def _display_name(cand):
-    """Map harness candidate ids to model version names for assess output."""
-    if cand == "vc_splice":
-        return "sm_v1_7"
-    return cand
+def _cand_display_name(cand_path):
+    parsed = parse_sm_version(cand_path)
+    if parsed is not None:
+        return format_version_label(*parsed)
+    return os.path.basename(cand_path)
 
 
-def run_track_b(metrica_root, out_csv, fetch=False):
+def run_track_b(metrica_root, out_csv, cand_path, fetch=False):
     from fetch_metrica import fetch_all, DEFAULT_OUT  # noqa: E402
     from eval_external import (  # noqa: E402
-        evaluate_vc_splice,
         aggregate_by_candidate,
+        current_cand_kwargs,
+        evaluate_cand_vs_latest,
+        kwargs_for_version,
         per_game_means,
+        pick_cand_vs_latest,
         write_csv,
-        pick_vs_reference,
     )
 
     root = metrica_root or DEFAULT_OUT
+    maj, minor = latest_version()
+    latest_label = format_version_label(maj, minor)
+    cand_label = _cand_display_name(cand_path)
+    display = {"cand": cand_label, "latest": latest_label, "smooth50": "smooth50"}
+
     print("=== Track B: Metrica H/A (external spellF1 + hidden team acc) ===")
     print("spellF1 = same possession_metrics as the challenge; GT = Metrica events.")
-    print("Model versions: sm_v1_5 vs sm_v1_7 vs smooth50.")
+    print("Model versions: {} vs {} vs smooth50.".format(cand_label, latest_label))
     if fetch:
         fetch_all(root=root)
-    rows = evaluate_vc_splice(root)
+    latest_kw = kwargs_for_version(maj, minor)
+    cand_kw = current_cand_kwargs()
+    rows = evaluate_cand_vs_latest(root, cand_kw, latest_kw)
     out_dir = os.path.dirname(out_csv)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -104,22 +122,25 @@ def run_track_b(metrica_root, out_csv, fetch=False):
     agg = aggregate_by_candidate(rows)
     per_g = per_game_means(rows)
     print("\n--- aggregate (mean over games x dropouts) ---")
+    order = ("cand", "latest", "smooth50")
     for name in sorted(agg, key=lambda n: -agg[n]["mean_spell_f1"]):
         s = agg[name]
         print("  {:16s}  spellF1={:.4f}  hidden={:.4f}  n={}".format(
-            _display_name(name), s["mean_spell_f1"], s["mean_hidden_team_acc"], s["n"]))
+            display.get(name, name), s["mean_spell_f1"], s["mean_hidden_team_acc"], s["n"]))
     print("\n--- per game ---")
-    for name in ("sm_v1_5", "vc_splice", "smooth50"):
+    for name in order:
         if name not in per_g:
             continue
         for game in sorted(per_g[name]):
             s = per_g[name][game]
             print("  {:16s}  {:16s}  spellF1={:.4f}  hidden={:.4f}".format(
-                _display_name(name), game, s["mean_spell_f1"], s["mean_hidden_team_acc"]))
-    winner, reason = pick_vs_reference(rows, "sm_v1_5")
-    print("\nVS sm_v1_5: {} ({})".format(
-        _display_name(winner) if winner else "none", reason))
-    print("Gate: for team/missing-ball changes, beat sm_v1_5 on spellF1 AND hidden, both games.")
+                display.get(name, name), game, s["mean_spell_f1"], s["mean_hidden_team_acc"]))
+    winner, reason = pick_cand_vs_latest(rows)
+    print("\nVS LATEST ({}): {} ({})".format(
+        latest_label,
+        display.get(winner, "none") if winner else "none",
+        reason))
+    print("Gate: beat LATEST on spellF1 AND hidden, both games.")
     return rows
 
 
@@ -129,8 +150,8 @@ def main(argv=None):
         "--cand", required=True,
         help="candidate BAR-ATH submission CSV (Track A)")
     parser.add_argument(
-        "--ref", default=DEFAULT_REF,
-        help="structure reference CSV (default sm_v1_7_compliant)")
+        "--ref", default=None,
+        help="LATEST / structure reference CSV (default from evaluation/results/LATEST)")
     parser.add_argument(
         "--smooth", default=DEFAULT_SMOOTH,
         help="smooth50 baseline CSV")
@@ -155,12 +176,14 @@ def main(argv=None):
     if not os.path.isfile(cand):
         print("FAIL  missing --cand {}".format(cand), file=sys.stderr)
         return 1
+    ref_path = os.path.abspath(args.ref) if args.ref else read_latest()
 
     track_b_err = []
 
     def _b():
         try:
-            run_track_b(args.metrica_root, args.metrica_out, fetch=args.fetch)
+            run_track_b(
+                args.metrica_root, args.metrica_out, cand, fetch=args.fetch)
         except Exception as exc:
             track_b_err.append(exc)
 
@@ -170,7 +193,7 @@ def main(argv=None):
         b_thread.start()
 
     try:
-        run_track_a(cand, os.path.abspath(args.ref), os.path.abspath(args.smooth))
+        run_track_a(cand, ref_path, os.path.abspath(args.smooth))
     except Exception as exc:
         print("FAIL  Track A: {}".format(exc), file=sys.stderr)
         if b_thread is not None:

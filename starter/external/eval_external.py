@@ -42,6 +42,7 @@ from state_machine import (  # noqa: E402
     DEFAULT_STILL_NEAR_EDGE_FRAMES,
     DEFAULT_STILL_SPEED_M,
     DEFAULT_USE_MAJORITY_NEAR,
+    DEFAULT_VC_SPLICE,
     label_possession,
     splice_vc_on_visible,
 )
@@ -352,6 +353,87 @@ def evaluate_vc_splice(root):
                     **row,
                 })
     return rows
+
+
+def kwargs_for_version(major, minor):
+    """Metrica kwargs for an approved model version. Extend when promoting."""
+    if (major, minor) == (1, 7):
+        kw = sm_v1_5_kwargs()
+        kw["vc_splice"] = True
+        return kw
+    if (major, minor) in ((1, 5), (1, 6)):
+        return sm_v1_5_kwargs()
+    raise KeyError(
+        "no Metrica kwargs registry for version ({}, {})".format(major, minor))
+
+
+def current_cand_kwargs():
+    """Live predict defaults on Metrica (BAR-ATH kickoff stays off)."""
+    kw = sm_v1_5_kwargs()
+    kw["vc_splice"] = DEFAULT_VC_SPLICE
+    return kw
+
+
+def evaluate_cand_vs_latest(root, cand_kwargs, latest_kwargs):
+    """Assess Track B: cand vs LATEST vs smooth50 (same dropouts as splice eval).
+
+    Row candidate ids are always 'cand', 'latest', 'smooth50' (no name collision).
+    """
+    rows = []
+    cands = (
+        ("cand", cand_kwargs),
+        ("latest", latest_kwargs),
+        ("smooth50", None),
+    )
+    for game_name in GAME_NAMES:
+        print("=== {} assess cand vs LATEST pz=1.0 ===".format(game_name), flush=True)
+        feats = extract_metrica_features(
+            game_name, root=root, pz_radius_m=1.0, dz_radius_m=1.0)
+        n = feats["n_frames"]
+        gt = build_metrica_gt(game_name, n, root=root)
+        graded = np.ones(n, dtype=bool)
+        drops = list(dropout_configs(gt, feats))
+        for drop_name, hide_mask in drops:
+            print("  {}".format(drop_name), flush=True)
+            for row in _score_drop(gt, feats, graded, hide_mask, cands):
+                rows.append({
+                    "game": game_name,
+                    "dropout": drop_name,
+                    "pz_radius_m": 1.0,
+                    "dz_radius_m": 1.0,
+                    **row,
+                })
+    return rows
+
+
+def pick_cand_vs_latest(rows, cand_id="cand", latest_id="latest"):
+    """Whether cand beats LATEST on mean spellF1 + hidden, both games."""
+    agg = aggregate_by_candidate(rows)
+    per_g = per_game_means(rows)
+    if latest_id not in agg:
+        return None, "missing LATEST {}".format(latest_id)
+    if cand_id not in agg:
+        return None, "missing cand {}".format(cand_id)
+    base_spell = agg[latest_id]["mean_spell_f1"]
+    base_hid = agg[latest_id]["mean_hidden_team_acc"]
+    cand = agg[cand_id]
+    if cand["mean_spell_f1"] <= base_spell:
+        return None, "cand spellF1 {:.4f} did not beat LATEST {:.4f}".format(
+            cand["mean_spell_f1"], base_spell)
+    cand_hid = cand["mean_hidden_team_acc"]
+    if cand_hid == cand_hid and base_hid == base_hid and cand_hid < base_hid:
+        return None, "cand hidden {:.4f} below LATEST {:.4f}".format(
+            cand_hid, base_hid)
+    games = sorted({r["game"] for r in rows})
+    for g in games:
+        if per_g[cand_id][g]["mean_spell_f1"] <= per_g[latest_id][g]["mean_spell_f1"]:
+            return None, "cand did not beat LATEST spellF1 on {}".format(g)
+        ref_h = per_g[latest_id][g]["mean_hidden_team_acc"]
+        cand_h = per_g[cand_id][g]["mean_hidden_team_acc"]
+        if cand_h == cand_h and ref_h == ref_h and cand_h < ref_h:
+            return None, "cand hidden below LATEST on {}".format(g)
+    return cand_id, "beat LATEST mean_spell {:.4f} -> {:.4f}".format(
+        base_spell, cand["mean_spell_f1"])
 
 
 def evaluate_vc_gap(root):

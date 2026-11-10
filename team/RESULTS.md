@@ -4,9 +4,9 @@
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** restored **`sm_v1`** → … → **`sm_v1_3`** → **`sm_v1_5`** → **`sm_v1_6`** → **`sm_v1_7`** (VC on visible + sm_v1_6 on missing; artifact `sm_v1_7_compliant.csv`). **`sm_v1_4`** soft ST is archived.
-- **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process.
-- **How we assess (not Oct):** two tracks via `assess.sh` — **A** local structure vs prior + **`baseline_smooth50.csv`**; **B** Metrica H/A (external spellF1 + hidden). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
+- **Forward path:** restored **`sm_v1`** → … → **`sm_v1_3`** → **`sm_v1_5`** → **`sm_v1_6`** → **`sm_v1_7`** (VC on visible + sm_v1_6 on missing). **Approved best:** `evaluation/results/LATEST` → `sm_v1_7_compliant.csv`. **`sm_v1_4`** soft ST is archived.
+- **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process. Auto predict floors on **LATEST**, not max bare archive.
+- **How we assess (not Oct):** two tracks via `assess.sh` — **A** and **B** both **cand vs LATEST vs smooth50** (A = structure CSV; B = Metrica H/A). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
 How to fill: `bash assess.sh <cand.csv>` (or predict → assess); add a RESULTS row. See [BEGINNER.md](BEGINNER.md).
 

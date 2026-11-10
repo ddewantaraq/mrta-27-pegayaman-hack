@@ -2,7 +2,7 @@
 
 Paper: Ferran Vidal-Codina et al., *Automatic event detection in football using tracking data*, Sports Engineering, 2022 ([arXiv:2202.00804](https://arxiv.org/abs/2202.00804), §2.3 only).
 
-**Model version:** `sm_v1_7` · Artifact: `evaluation/results/sm_v1_7_compliant.csv`  
+**Model version:** `sm_v1_7` · Artifact: `evaluation/results/sm_v1_7_compliant.csv` · **LATEST** pointer: `evaluation/results/LATEST`  
 (Oct archive `sm_v1_7.csv` is unrelated — not from this branch.)
 
 ---

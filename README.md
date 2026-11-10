@@ -97,7 +97,7 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork includes a possession **state machine** over tactical ATD.
-**Active / forward path:** compliant **`sm_v1_7`** (Vidal-Codina on visible + sm_v1_6 on missing). Artifact: `evaluation/results/sm_v1_7_compliant.csv`. Rollback → `sm_v1_6`.
+**Active / forward path:** compliant **`sm_v1_7`** (Vidal-Codina on visible + sm_v1_6 on missing). Approved best pointer: `evaluation/results/LATEST` → `sm_v1_7_compliant.csv`. Rollback → `sm_v1_6`.
 We do **not** tune parameters on the public possession ground truth (organiser clarification).
 
 ```bash
@@ -105,15 +105,17 @@ python3 -m venv .venv && source .venv/bin/activate   # once; keep activated
 pip install -r requirements.txt
 # unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
 
-# Fixed compliant filename (recommended):
+# Fixed approved artifact (recommended when regenerating LATEST):
 python starter/predict_v1.py --out evaluation/results/sm_v1_7_compliant.csv
 python evaluation/validate_submission.py evaluation/results/sm_v1_7_compliant.csv
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv   # Track A + B
+bash assess.sh evaluation/results/sm_v1_7_compliant.csv   # Track A + B (cand vs LATEST vs smooth50)
 
-# Or one-shot auto-increment sm_v*.csv then assess:
+# Or one-shot: next version after LATEST, then assess:
 bash predict_v1.sh            # Mac / Linux / Git Bash
 # predict_v1.bat              # Windows CMD
 ```
+
+Auto naming: bump from **LATEST** (not max archive `sm_v2_*`); prefer bare `sm_v*.csv`; add `_compliant` only if that bare file already exists. Does not rewrite `LATEST`.
 
 `predict_v1.sh` / `assess.sh` pick `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`. Windows: `predict_v1.bat` / `assess.bat`.
 

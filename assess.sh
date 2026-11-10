@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Dual-track assess: Track A (structure) + Track B (Metrica H/A).
+# Dual-track assess: Track A + Track B (both cand vs LATEST vs smooth50).
+# LATEST = evaluation/results/LATEST (approved best).
 # Usage:
 #   bash assess.sh evaluation/results/sm_v1_7_compliant.csv
 #   bash assess.sh evaluation/results/sm_v1_7_compliant.csv --skip-metrica

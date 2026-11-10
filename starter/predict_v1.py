@@ -3,9 +3,9 @@
 The one command that also validates and scores is predict_v1.bat (Command Prompt)
 or predict_v1.sh (Mac Terminal, or Git Bash on Windows). This file is the predict step.
 
-By default writes the next auto-incremented file under evaluation/results/:
-  sm_v1.csv (1.0), sm_v1_1.csv … sm_v1_10.csv, then sm_v2.csv, …
-Pass --out PATH to force a path and skip auto-versioning.
+By default writes the next file after evaluation/results/LATEST (approved best):
+  bump minor until 10, then major+1; prefer bare sm_v*.csv; add _compliant
+  only when that bare name already exists. Pass --out PATH to force a path.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
 Defaults = compliant sm_v1_7 (sm_v1_6 + Vidal-Codina gain where the ball is
@@ -17,7 +17,6 @@ from __future__ import print_function
 
 import argparse
 import os
-import re
 import sys
 
 import numpy as np
@@ -32,6 +31,11 @@ from features import (  # noqa: E402
     DEFAULT_CLUSTER_RADIUS_M,
     extract_features,
     summarize,
+)
+from model_latest import (  # noqa: E402
+    RESULTS_DIR,
+    next_out_path,
+    parse_sm_version,
 )
 from vc_possession import (  # noqa: E402
     DEFAULT_DZ_RADIUS_M,
@@ -68,66 +72,6 @@ from state_machine import (  # noqa: E402
     splice_vc_on_visible,
 )
 
-RESULTS_DIR = os.path.join(ROOT, "evaluation", "results")
-MAX_MINOR = 10
-
-_RE_MAJOR_ONLY = re.compile(r"^sm_v(\d+)\.csv$", re.IGNORECASE)
-_RE_MAJOR_MINOR = re.compile(r"^sm_v(\d+)_(\d+)\.csv$", re.IGNORECASE)
-
-
-def parse_sm_version(filename):
-    """Return (major, minor) or None. minor is 0..10 inclusive when present."""
-    name = os.path.basename(filename)
-    m = _RE_MAJOR_MINOR.match(name)
-    if m:
-        major = int(m.group(1))
-        minor = int(m.group(2))
-        if 0 <= minor <= MAX_MINOR:
-            return major, minor
-        return None
-    m = _RE_MAJOR_ONLY.match(name)
-    if m:
-        return int(m.group(1)), 0
-    return None
-
-
-def format_sm_filename(major, minor):
-    """1.0 -> sm_v1.csv; 1.2 -> sm_v1_2.csv; 2.0 -> sm_v2.csv."""
-    if minor == 0:
-        return "sm_v{}.csv".format(major)
-    return "sm_v{}_{}.csv".format(major, minor)
-
-
-def latest_sm_version(results_dir):
-    """Max (major, minor) among sm_v*.csv in results_dir, or None."""
-    if not os.path.isdir(results_dir):
-        return None
-    best = None
-    for name in os.listdir(results_dir):
-        parsed = parse_sm_version(name)
-        if parsed is None:
-            continue
-        if best is None or parsed > best:
-            best = parsed
-    return best
-
-
-def next_sm_version(major, minor):
-    """Bump minor until 10, then major+1 with minor 0."""
-    if minor < MAX_MINOR:
-        return major, minor + 1
-    return major + 1, 0
-
-
-def resolve_auto_out_path(results_dir=RESULTS_DIR):
-    """Next submission path after the latest sm_v* file (or sm_v1.csv if none)."""
-    latest = latest_sm_version(results_dir)
-    if latest is None:
-        major, minor = 1, 0
-    else:
-        major, minor = next_sm_version(*latest)
-    return os.path.join(results_dir, format_sm_filename(major, minor)), major, minor
-
 
 def write_submission(path, labels):
     folder = os.path.dirname(path)
@@ -145,7 +89,7 @@ def main():
     parser.add_argument("--game", default=GAME)
     parser.add_argument(
         "--out", default=None,
-        help="submission CSV path; default = next auto sm_v* under evaluation/results/",
+        help="submission CSV path; default = next after LATEST (bare, or _compliant if bare exists)",
     )
     parser.add_argument("--control-frames", type=int, default=DEFAULT_CONTROL_FRAMES)
     parser.add_argument("--control-dist-m", type=float, default=DEFAULT_CONTROL_DIST_M)
@@ -295,7 +239,7 @@ def main():
 
     version = None
     if args.out is None:
-        out_path, major, minor = resolve_auto_out_path(RESULTS_DIR)
+        out_path, major, minor = next_out_path(RESULTS_DIR)
         version = (major, minor)
     else:
         out_path = args.out

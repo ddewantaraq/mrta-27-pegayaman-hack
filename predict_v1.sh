@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Predict → validate → dual-track assess (structure + Metrica).
+# Auto out = next version after evaluation/results/LATEST (approved best);
+# bare sm_v*.csv preferred; _compliant only if that bare name already exists.
 # Optional: PUBLIC_LOG=1 bash predict_v1.sh   # also run public 5-min log
 set -euo pipefail
 cd "$(dirname "$0")"
