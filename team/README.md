@@ -3,7 +3,7 @@
 This folder is our team workspace for **More than a Hack 2027** (ball possession).  
 The **runnable model** lives under [`starter/`](../starter/) (ATD features + state machine). This README is for anyone who wants to **regenerate our submission**.
 
-Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) · Score log: [RESULTS.md](RESULTS.md) · Process: [TEAM.md](TEAM.md)
+Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](../docs/ASSESS.md) · Rules: [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) · Scores: [RESULTS.md](RESULTS.md) · Process: [TEAM.md](TEAM.md)
 
 ---
 
@@ -12,11 +12,12 @@ Challenge overview: [../README.md](../README.md) · Rules we encode: [TECH_DOC_D
 | Piece | Path |
 |-------|------|
 | Predict | `starter/predict_v1.py` |
-| One-shot (predict → validate → score) | `predict_v1.sh` (Mac/Linux/Git Bash) or `predict_v1.bat` (Windows) |
+| One-shot (predict → validate → **assess**) | `predict_v1.sh` / `predict_v1.bat` |
+| Dual-track assess only | `assess.sh` / `assess.bat` → `starter/assess.py` |
 | Features / rules | `starter/features.py`, `state_machine.py` |
-| Public scorer | `evaluation/run_evaluation.py` (pipeline **log** only — not a tuning loop) |
+| Public scorer | optional `--public-log` / `PUBLIC_LOG=1` (not a keep gate) |
 
-**Current default (compliant path):** **`sm_v1_6`** (sm_v1_5 + half-kickoff-reset). Rollback: `--no-half-kickoff-reset` (sm_v1_5) / `--no-backdate-switch --gap-bridge off` / `--smart-tagging` (archived sm_v1_4). Oct 2026 archive rows are **not** the forward default.
+**Current code default:** **`sm_v1_7`**. Rollback to **`sm_v1_6`**: `--no-vc-splice` (implementation flag) / `--no-half-kickoff-reset` / `--no-backdate-switch --gap-bridge off`. Oct archive rows are **not** the forward path. Algorithm note: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
 
 **Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
 
@@ -56,21 +57,22 @@ bash predict_v1.sh
 predict_v1.bat
 ```
 
-That will predict → validate → run the public scorer once for the **log**. Do **not** keep/drop model changes because the board moved.
+That runs predict → validate → **Track A + Track B assess**. Optional public log: `PUBLIC_LOG=1 bash predict_v1.sh`. Do **not** keep/drop from the public board.
 
 `sm_v*.csv` files are **gitignored**. Do not commit them.
 
 ---
 
-## Predict only / force a path
+## Assess only / predict only
 
 ```bash
 source .venv/bin/activate
-python starter/predict_v1.py
+bash assess.sh evaluation/results/sm_v1_7_compliant.csv
+bash assess.sh evaluation/results/sm_v1_7_compliant.csv --skip-metrica
+
 python starter/predict_v1.py --out evaluation/results/mine.csv
 python evaluation/validate_submission.py evaluation/results/mine.csv
-# optional one-off log:
-python evaluation/run_evaluation.py
+bash assess.sh evaluation/results/mine.csv
 ```
 
 ---
@@ -79,13 +81,11 @@ python evaluation/run_evaluation.py
 
 **Validate:** `OK` and `199319 rows`.
 
-**Structure (no GT):** compare graded-half metrics (short H/A islands, mean spell dur, n_spells, graded X, X-after-D) to **`sm_v1_3_compliant.csv`** and to **`evaluation/results/baseline_smooth50.csv`**. Prefer structure ≥ sm_v1_3 and clearly better than smooth50. Missing-ball H/A correctness: Metrica external harness (`starter/external/`). Public scoreboard numbers are for the RESULTS log only — not a success gate. See [TEAM.md](TEAM.md) § How we assess.
-
-Full table: [RESULTS.md](RESULTS.md).
+**Assess:** see [../docs/ASSESS.md](../docs/ASSESS.md) — Track A structure vs ref + smooth50; Track B Metrica H/A. Full table: [RESULTS.md](RESULTS.md).
 
 ---
 
-## Useful flags (defaults = compliant `sm_v1_6`)
+## Useful flags (defaults = compliant `sm_v1_7`)
 
 | Flag | Default | Meaning |
 |------|---------|---------|
@@ -94,6 +94,7 @@ Full table: [RESULTS.md](RESULTS.md).
 | `--missing-near-edge-frames` / `--still-near-edge-frames` | `50` / `25` | Near-edge missing / still → `D` |
 | `--keep-last-live-on-dead` | on | Freeze last team through `D` |
 | `--half-kickoff-reset` / `--no-half-kickoff-reset` | on | HT clear; D before 2nd KO; seed opposite team |
+| `--no-vc-splice` | off (sm_v1_7 on) | Roll back to **sm_v1_6** (no Vidal-Codina on visible frames) |
 | `--backdate-switch` / `--no-backdate-switch` | on | Relabel pending frames once switch confirms |
 | `--gap-bridge` | `mid` | `off\|start\|mid\|end` — place switch inside live missing gap |
 | `--long-gap-dead-frames` | `0` | Optional missing streak → D (off; hurt externally) |
@@ -111,6 +112,8 @@ Full table: [RESULTS.md](RESULTS.md).
 | [TASKS.md](TASKS.md) | Board |
 | [RESULTS.md](RESULTS.md) | Every scored CSV + experiment notes |
 | [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) | Approach + possession rules as implemented |
+| [../docs/ASSESS.md](../docs/ASSESS.md) | Two-track assess command |
+| [../docs/algorithms/](../docs/algorithms/) | Algorithm decision notes |
 | [WEEK3.md](WEEK3.md) / [WEEK4.md](WEEK4.md) | Week plans |
 
 ---

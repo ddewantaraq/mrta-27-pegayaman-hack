@@ -17,7 +17,7 @@ _Owner: B · Reviewer: E1_ — **T13r signed off 2026-10-24**
 - **macroF1** (tie-break / per-frame): Mean of the per-class F1 scores for `H`, `A`, and `D` on every graded frame. Measures “right letter, right frame.” Useful diagnostic; reported beside spellF1 and breaks ties only.
 - **Organiser clarification (Nov 2026):** parameters must **not** be trained, fitted, or calibrated on the possession ground truth or the provided video. The public 5-minute GT is for **pipeline verification** only (file shape, scorer runs). We set knobs from challenge rules / ATD physics (or licensed external data), not from public spellF1 keep/drop.
 - Why public spellF1 alone was always a weak private proxy: smooth125 can lead the public window while losing on the full match (published floor smooth50 spellF1 **0.2433**). That is a second reason not to chase the public board — the first is the clarification itself.
-- **How we assess (vs Oct public-GT keep/drop):** local CSV structure vs **`sm_v1_3_compliant`** (structure reference) **and** vs shipped `baseline_smooth50.csv`. Missing-ball H/A correctness is measured only on **external** Metrica sample games (event-derived labels + synthetic ball dropout). Public board = log only. Detail: team [TEAM.md](TEAM.md) § How we assess.
+- **How we assess (vs Oct public-GT keep/drop):** dual tracks via `assess.sh` — local structure vs prior + `baseline_smooth50.csv`; Metrica H/A (external spellF1 + hidden). Public board = optional log only. Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
 Illustration (pipeline sanity, T10): raw invents far more possessions than a coach would count → structure matters more than frame accuracy.
 
@@ -106,16 +106,22 @@ Features (tactical ATD): ball present, position, nearest team and distance (m), 
 - Long-gap → D was A/B'd externally and **dropped** (hurt hidden-frame team accuracy).
 - Chosen on Metrica Sample_Game_1/2 only; BAR-ATH used for non-GT structure vs sm_v1_3 + smooth50. Rollback: `--no-backdate-switch --gap-bridge off`.
 
-**Compliant `sm_v1_6` (default; builds on sm_v1_5):**
+**Compliant `sm_v1_6` (builds on sm_v1_5):**
 - **Half-kickoff reset** (`--half-kickoff-reset`): clear `last_live` on ungraded (halftime); graded half-2 frames before published 2nd kickoff (`KICKOFF_VIDEO_FRAMES["2nd Half"]`, FAQ/DATA) → **D**; at that frame seed `last_live` = opposite of first locked team in half 1 (Laws: other team kicks off 2nd half).
 - Half-1 cold-start X unchanged (live after kickoff, nobody close yet).
 - Rollback: `--no-half-kickoff-reset`.
 
-One command: `predict_v1.bat` / `predict_v1.sh` (writes next `sm_v*`, validates, optional score log).
+**Compliant `sm_v1_7` (default; builds on sm_v1_6):**
+- Two passes. Where the ball coordinate is present, the candidate is a Vidal-Codina gain (possession zone 1.0 m, duel zone 1.0 m; direction change > 10° or speed change > 5 m/s). A duel or a straight fly-by does not switch the team.
+- Where the ball is missing, the label is the `sm_v1_6` label, including gap-bridge mid.
+- One short-spell merge on the joined row.
+- Chosen on Metrica against `sm_v1_5`: spellF1 0.370→0.429 and hidden-frame team accuracy 0.510→0.512, both games. Plain VC on all frames (including missing) lost hidden-frame accuracy and is not the default. Rollback → `sm_v1_6`. Detail: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
+
+One command: `predict_v1.sh` / `.bat` (predict → validate → **assess**). Re-assess only: `assess.sh <cand.csv>`. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ### External validation (missing-ball H/A)
 
-Harness: `starter/external/` — fetch Metrica Sample_Game_1/2, build features, derive H/A/D/X from events (PASS/RECOVERY/SHOT/SET PIECE/BALL LOST set team; BALL OUT→D until SET PIECE; X pre-kickoff/halftime), hide the ball on natural missing + 2/5/10/30 s live gaps, score with `possession_metrics.evaluate` plus **hidden-frame team accuracy**.
+Harness: `starter/external/` — fetch Metrica Sample_Game_1/2, build features, derive H/A/D/X from events (PASS/RECOVERY/SHOT/SET PIECE/BALL LOST set team; BALL OUT→D until SET PIECE; X pre-kickoff/halftime), hide the ball on natural missing + 2/5/10/30 s live gaps, score with `possession_metrics.evaluate` (same spellF1 as the challenge) plus **hidden-frame team accuracy**. Also: `starter/assess.py` Track B.
 
 Aggregate (mean over 2 games × 5 dropouts):
 
@@ -123,6 +129,7 @@ Aggregate (mean over 2 games × 5 dropouts):
 |-----------|---------|------------------------|
 | sm_v1_3 | 0.3141 | 0.5052 |
 | **sm_v1_5** (mid + backdate) | **0.3701** | **0.5102** |
+| **sm_v1_7** (VC visible, v1.5 missing) | **0.4286** | **0.5117** |
 | smooth50-equivalent | 0.3210 | 0.1528 |
 
 Leave-one-game-out: sm_v1_5 beat sm_v1_3 on both Sample_Game_1 and Sample_Game_2. Literature: Link & Hoernig, *Individual ball possession in soccer*, PLOS ONE 2017.
@@ -133,7 +140,7 @@ Leave-one-game-out: sm_v1_5 beat sm_v1_3 on both Sample_Game_1 and Sample_Game_2
 
 _Owner: E1_
 
-- Ball missing (~41% graded): **Hold** last live team; sm_v1_5+ may **retime** the H/A switch inside a gap (gap-bridge mid) and backdates pending once control confirms. `X` mainly kickoff cold-start / never established, or ungraded. sm_v1_6 clears `last_live` at half-time so half 2 does not inherit half 1.
+- Ball missing (~41% graded): the `sm_v1_6` label, which holds the last live team and may retime an H/A switch inside a gap (gap-bridge mid). Visible frames use the possession-zone gain (`sm_v1_7`). `X` mainly kickoff cold-start / never established, or ungraded. Half-time still clears `last_live`.
 - No player IDs: team-collective nearest + cluster majority in the control circle (sm_v1_3).
 - Dead-ball: out-of-pitch always; sm_v1_1+ near-edge missing/still; sm_v1_6 D on half-2 graded frames before published 2nd kickoff. Soft SET PIECES archived (`--smart-tagging`).
 - Smart Tagging: **off** in sm_v1_6 default; phase votes off. Kickoff frames come from published constants (FAQ/DATA), not ST XML.
@@ -155,7 +162,7 @@ _Owner: B + E1_
 _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate a submission that matches our
-**compliant defaults** (`sm_v1_6`). Step-by-step: **[README.md](README.md)**.
+**compliant defaults** (`sm_v1_7`). Step-by-step: **[README.md](README.md)** · assess: [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
@@ -166,8 +173,8 @@ bash predict_v1.sh
 Windows: activate `.venv`, then `predict_v1.bat`.
 
 - Output: next `evaluation/results/sm_v*.csv` — 199,319 rows, `frame,label`. Gitignored.
-- Defaults (compliant `sm_v1_6`): sm_v1_5 knobs plus `half_kickoff_reset=True`. Rollback: `--no-half-kickoff-reset` (sm_v1_5) / `--no-backdate-switch --gap-bridge off` / `--smart-tagging` (archived sm_v1_4).
-- External validation (optional): `python starter/external/fetch_metrica.py` then `python starter/external/eval_external.py --sweep`.
+- Defaults (`sm_v1_7`): sm_v1_6 knobs plus VC on visible / sm_v1_6 rules on missing. Rollback → `sm_v1_6` / `--no-half-kickoff-reset` / `--no-backdate-switch --gap-bridge off`.
+- Dual-track assess: `bash assess.sh evaluation/results/sm_v1_7_compliant.csv` (or after predict).
 - Match `data/` and `data_external/` are **not** in the public repo. See `DATA.md`.
 
 ---
@@ -187,4 +194,5 @@ Windows: activate `.venv`, then `predict_v1.bat`.
 | 2026-11-03 | E1 | sm_v1_3 default: contested majority-near-ball; levers 1–4 in §2; §3/§6 |
 | 2026-11-07 | E1 | sm_v1_4: missing-aware soft SET PIECES → D; later archived vs sm_v1_3 structure |
 | 2026-11-07 | E1 | sm_v1_5: backdate-switch + gap-bridge mid (Metrica external); §2/§3/§4/§6 |
-| 2026-11-08 | E1 | sm_v1_6 default: half-kickoff-reset (HT clear, D pre-2nd KO, opposite seed); §3/§6 |
+| 2026-11-08 | E1 | sm_v1_6: half-kickoff-reset (HT clear, D pre-2nd KO, opposite seed); §3/§6 |
+| 2026-11-09 | E1 | sm_v1_7: VC visible + sm_v1_6 missing; dual assess command; docs/algorithms |

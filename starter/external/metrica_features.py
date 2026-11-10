@@ -27,6 +27,11 @@ from features import (  # noqa: E402
     empty_feature_arrays,
     proximity_to_ball,
 )
+from vc_possession import (  # noqa: E402
+    DEFAULT_DZ_RADIUS_M,
+    DEFAULT_PZ_RADIUS_M,
+    zone_control,
+)
 from fetch_metrica import DEFAULT_OUT, game_paths  # noqa: E402
 
 PITCH_LENGTH_M = 105.0
@@ -101,6 +106,8 @@ def extract_metrica_features(
     game_name,
     root=DEFAULT_OUT,
     cluster_radius_m=DEFAULT_CLUSTER_RADIUS_M,
+    pz_radius_m=DEFAULT_PZ_RADIUS_M,
+    dz_radius_m=DEFAULT_DZ_RADIUS_M,
 ):
     """Feature dict compatible with label_possession for one Metrica sample game."""
     paths = game_paths(game_name, root)
@@ -181,6 +188,7 @@ def extract_metrica_features(
 
         player_xy = []
         teams = []
+        pids = []
         for ix, iy in home_players:
             px = _float_or_nan(hrow[ix]) if ix < len(hrow) else np.nan
             py = _float_or_nan(hrow[iy]) if iy < len(hrow) else np.nan
@@ -189,6 +197,7 @@ def extract_metrica_features(
             else:
                 player_xy.append((px * length, py * width))
             teams.append(HOME)
+            pids.append(len(pids))
         for ix, iy in away_players:
             px = _float_or_nan(arow[ix]) if ix < len(arow) else np.nan
             py = _float_or_nan(arow[iy]) if iy < len(arow) else np.nan
@@ -197,8 +206,14 @@ def extract_metrica_features(
             else:
                 player_xy.append((px * length, py * width))
             teams.append(AWAY)
+            pids.append(10000 + len(pids))
 
         prox = proximity_to_ball(player_xy, teams, (bx, by), cluster_radius_m)
+        zpid, zteam, zduel = zone_control(
+            player_xy, teams, pids, (bx, by), pz_radius_m, dz_radius_m)
+        arrays["pz_player"][i] = zpid
+        arrays["pz_team"][i] = zteam
+        arrays["pz_duel"][i] = zduel
         arrays["nearest_team"][i] = prox["nearest_team"]
         arrays["nearest_dist"][i] = prox["nearest_dist"]
         arrays["min_dist_home"][i] = prox["min_dist_home"]
@@ -221,10 +236,15 @@ def extract_metrica_features(
         "n_near_home": arrays["n_near_home"],
         "n_near_away": arrays["n_near_away"],
         "majority_team": arrays["majority_team"],
+        "pz_player": arrays["pz_player"],
+        "pz_team": arrays["pz_team"],
+        "pz_duel": arrays["pz_duel"],
         "n_frames": n_frames,
         "pitch": (length, width),
         "game": game_name,
         "cluster_radius_m": float(cluster_radius_m),
+        "pz_radius_m": float(pz_radius_m),
+        "dz_radius_m": float(dz_radius_m),
         "period": periods,
     }
 

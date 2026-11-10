@@ -2,7 +2,7 @@
 
 You do **not** need to write the possession model. You keep the team honest: run the official tools, log scores, write plain-language docs, and handle submission logistics.
 
-Roles overview: [TEAM.md](TEAM.md) · Your tasks: [TASKS.md](TASKS.md) (filter **B**)
+Roles overview: [TEAM.md](TEAM.md) · Your tasks: [TASKS.md](TASKS.md) (filter **B**) · Assess: [../docs/ASSESS.md](../docs/ASSESS.md)
 
 ---
 
@@ -25,14 +25,21 @@ Mark **T01** done when that works. Note your Python version in [RESULTS.md](RESU
 
 ## Commands you will use often
 
-### Score everything in `evaluation/results/` (pipeline log only)
+### Dual-track assess (keep ritual — preferred)
 
 ```bash
 source .venv/bin/activate
-python evaluation/run_evaluation.py
+bash assess.sh evaluation/results/<file>.csv
 ```
 
-Copy the printed board into [RESULTS.md](RESULTS.md). **Do not** tell the team to keep/drop a model from that board.
+Track A = structure vs latest + smooth50; Track B = Metrica H/A. See [../docs/ASSESS.md](../docs/ASSESS.md).
+
+### Optional public board log (not a keep gate)
+
+```bash
+python evaluation/run_evaluation.py
+# or: bash assess.sh evaluation/results/<file>.csv --public-log
+```
 
 ### Check a submission before anyone “trusts” it
 
@@ -40,26 +47,14 @@ Copy the printed board into [RESULTS.md](RESULTS.md). **Do not** tell the team t
 python evaluation/validate_submission.py evaluation/results/<file>.csv
 ```
 
-Replace `<file>.csv` with the real name. If validation fails, the official scorer will skip it — tell E2 immediately.
-
-### Regenerate official baselines (usually E2 owns this; you may watch)
-
-```bash
-python starter/baseline.py
-```
-
-### Regenerate, validate, and score the current model (T22)
-
-From the repo root, with the match bundle in `data/` (or `MTAH_DATA_DIR` set). Activate `.venv` first.
+### Regenerate, validate, and assess the current model
 
 ```bash
 source .venv/bin/activate
 bash predict_v1.sh
 ```
 
-Windows CMD: `predict_v1.bat` after activating `.venv`.
-
-It writes the **next** auto-incremented `evaluation/results/sm_v*.csv`. Then add a RESULTS row (**T30**). Do not commit the CSV.
+Windows CMD: `predict_v1.bat`. Writes next `sm_v*.csv`, then runs assess. Add a RESULTS row (**T30**). Do not commit the CSV.
 
 ---
 

@@ -19,6 +19,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 from games import GAME, GAMES, require, source_frames  # noqa: E402
+from vc_possession import (  # noqa: E402
+    DEFAULT_DZ_RADIUS_M,
+    DEFAULT_PZ_RADIUS_M,
+    zone_control,
+)
 
 FIELD_SEP = ":"
 GROUP_SEP = ";"
@@ -123,10 +128,20 @@ def empty_feature_arrays(n_frames):
         "n_near_home": np.zeros(n_frames, dtype=np.int8),
         "n_near_away": np.zeros(n_frames, dtype=np.int8),
         "majority_team": np.full(n_frames, NOBODY, dtype=np.int8),
+        # Vidal-Codina zone hit, before the gain test. -1 / NOBODY / False if none.
+        "pz_player": np.full(n_frames, -1, dtype=np.int32),
+        "pz_team": np.full(n_frames, NOBODY, dtype=np.int8),
+        "pz_duel": np.zeros(n_frames, dtype=bool),
     }
 
 
-def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_RADIUS_M):
+def extract_features(
+    game=GAME,
+    data_dir=None,
+    cluster_radius_m=DEFAULT_CLUSTER_RADIUS_M,
+    pz_radius_m=DEFAULT_PZ_RADIUS_M,
+    dz_radius_m=DEFAULT_DZ_RADIUS_M,
+):
     """Dict of length-n_frames arrays for the tactical ATD.
 
     Keys:
@@ -137,6 +152,7 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
       min_dist_home, min_dist_away, nearest_dist   float metres (NaN if unavailable)
       n_near_home, n_near_away   int8  players within cluster_radius_m of ball
       majority_team  int8  team with more near players, or -1 on tie / none
+      pz_player, pz_team, pz_duel  Vidal-Codina zone (before gain test)
     """
     meta_path, raw_path = require(["atd_meta", "atd_raw"], game, data_dir)
     n_frames = source_frames("tactical", game)
@@ -157,6 +173,9 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
     n_near_home = arrays["n_near_home"]
     n_near_away = arrays["n_near_away"]
     majority_team = arrays["majority_team"]
+    pz_player = arrays["pz_player"]
+    pz_team = arrays["pz_team"]
+    pz_duel = arrays["pz_duel"]
 
     with open(raw_path) as handle:
         for line in handle:
@@ -183,7 +202,9 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
 
             player_xy = []
             teams = []
+            pids = []
             for slot, group in enumerate(parts[1].split(GROUP_SEP)):
+                pids.append(slot)
                 parsed = _parse_xyz(group)
                 if parsed is None:
                     player_xy.append(None)
@@ -195,6 +216,11 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
                     int(team_of_track[slot]) if slot < len(team_of_track) else NOBODY)
 
             prox = proximity_to_ball(player_xy, teams, (bx, by), cluster_radius_m)
+            zpid, zteam, zduel = zone_control(
+                player_xy, teams, pids, (bx, by), pz_radius_m, dz_radius_m)
+            pz_player[frame] = zpid
+            pz_team[frame] = zteam
+            pz_duel[frame] = zduel
             nearest_team[frame] = prox["nearest_team"]
             nearest_dist[frame] = prox["nearest_dist"]
             min_dist_home[frame] = prox["min_dist_home"]
@@ -217,10 +243,15 @@ def extract_features(game=GAME, data_dir=None, cluster_radius_m=DEFAULT_CLUSTER_
         "n_near_home": n_near_home,
         "n_near_away": n_near_away,
         "majority_team": majority_team,
+        "pz_player": pz_player,
+        "pz_team": pz_team,
+        "pz_duel": pz_duel,
         "n_frames": n_frames,
         "pitch": (length, width),
         "game": game,
         "cluster_radius_m": float(cluster_radius_m),
+        "pz_radius_m": float(pz_radius_m),
+        "dz_radius_m": float(dz_radius_m),
     }
 
 

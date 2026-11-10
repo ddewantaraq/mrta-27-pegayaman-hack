@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Predict → validate → dual-track assess (structure + Metrica).
+# Optional: PUBLIC_LOG=1 bash predict_v1.sh   # also run public 5-min log
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -33,7 +35,11 @@ fi
 echo "=== validate ==="
 "$PY" evaluation/validate_submission.py "$SUBMISSION"
 
-echo "=== score ==="
-"$PY" evaluation/run_evaluation.py
+echo "=== assess (Track A + Track B) ==="
+ASSESS_ARGS=(--cand "$SUBMISSION")
+if [[ "${PUBLIC_LOG:-0}" == "1" ]] || [[ "${1:-}" == "--public-log" ]]; then
+  ASSESS_ARGS+=(--public-log)
+fi
+"$PY" starter/assess.py "${ASSESS_ARGS[@]}"
 
-echo "OK  predicted, validated, and scored $SUBMISSION"
+echo "OK  predicted, validated, and assessed $SUBMISSION"

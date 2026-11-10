@@ -97,24 +97,28 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork includes a possession **state machine** over tactical ATD.
-**Active defaults** follow compliant **`sm_v1_6`** (sm_v1_5 + half-time clear, D before 2nd kickoff, opposite kickoff seed; Smart Tagging off).
+**Active / forward path:** compliant **`sm_v1_7`** (Vidal-Codina on visible + sm_v1_6 on missing). Artifact: `evaluation/results/sm_v1_7_compliant.csv`. Rollback → `sm_v1_6`.
 We do **not** tune parameters on the public possession ground truth (organiser clarification).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # once; keep activated
 pip install -r requirements.txt
 # unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
-bash predict_v1.sh          # Mac / Linux / Git Bash
-# predict_v1.bat            # Windows CMD
+
+# Fixed compliant filename (recommended):
+python starter/predict_v1.py --out evaluation/results/sm_v1_7_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v1_7_compliant.csv
+bash assess.sh evaluation/results/sm_v1_7_compliant.csv   # Track A + B
+
+# Or one-shot auto-increment sm_v*.csv then assess:
+bash predict_v1.sh            # Mac / Linux / Git Bash
+# predict_v1.bat              # Windows CMD
 ```
 
-`predict_v1.sh` picks `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`.
+`predict_v1.sh` / `assess.sh` pick `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`. Windows: `predict_v1.bat` / `assess.bat`.
 
-That writes the next `evaluation/results/sm_v*.csv`, validates it, and may print the public scoreboard as a **pipeline log** only.
-
-**Full how-to, flags, and result notes:** **[team/README.md](team/README.md)** ·  
-Rules as implemented: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) ·  
-Score history: [team/RESULTS.md](team/RESULTS.md)
+**Assess ritual:** [docs/ASSESS.md](docs/ASSESS.md) · **How-to:** [team/README.md](team/README.md) ·  
+Rules: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) · Scores: [team/RESULTS.md](team/RESULTS.md) · Algorithms: [docs/algorithms/](docs/algorithms/)
 
 `sm_v*.csv` files are gitignored — regenerate locally. Shipped `baseline_*.csv` still score without data.
 
