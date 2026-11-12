@@ -1,6 +1,8 @@
 """T21: possession state machine over T20 features.
 
-Default path = compliant sm_v1_7 (sm_v1_6 + Vidal-Codina gain on visible frames only).
+Default path = compliant sm_v1_8 (sm_v1_7 + short D-sandwich bridge ≤25f).
+T27 control-confirm stays available but off (Track B lost).
+sm_v1_7 = sm_v1_6 + Vidal-Codina gain on visible frames only.
 sm_v1_5 = sm_v1_3 + missing-ball H/A (backdate + gap-bridge mid; Smart Tagging off).
 Optional --vc-possession: candidate team is a Vidal-Codina validated gain
 (direction or speed change inside the possession zone), not nearest-player.
@@ -25,6 +27,8 @@ Rules encoded (see CHALLENGE.md / team TECH_DOC):
   - Dead-ball: out of pitch; optional near-edge missing / still-ball; soft SET PIECES prior
   - On D, optionally freeze last_live (sm_v1_1+) or clear it (sm_v1)
   - Short H/A merge: touch without control != turnover
+  - Control-confirm (T27, off): sandwich H/A spells keep only if duration/pass evidence
+  - Dead-bridge (T32): brief D between same H/A → fill to that team (tracking flicker)
 """
 
 from __future__ import print_function
@@ -33,6 +37,7 @@ import numpy as np
 
 from games import GAME, half_video_blocks
 from load_smart_tagging import KICKOFF_VIDEO_FRAMES
+from pass_travel_t27 import detect_same_team_travel
 from vc_possession import (
     DEFAULT_BA_THRESHOLD_DEG,
     DEFAULT_BV_THRESHOLD_M_S,
@@ -72,6 +77,15 @@ _VC_GAPS = ("off", "reappear", "edge")
 # Visible frames use the possession-zone gain; missing frames stay on sm_v1_5/6.
 # Kept: Metrica spellF1 and hidden-frame accuracy beat sm_v1_5 on both games.
 DEFAULT_VC_SPLICE = True
+# Control-confirm (T27 redesign): sandwich spells need duration or same-team passes.
+# Default OFF: Metrica Track B spellF1 fell vs sm_v1_7. Archive flag only.
+DEFAULT_USE_CONTROL_CONFIRM = False
+DEFAULT_CONFIRM_FRAMES = 75          # 3.0 s at 25 fps
+DEFAULT_CONFIRM_PASSES = 3           # more than two consecutive passes
+# Short D-sandwich bridge (T32): D between same H/A shorter than this → that team.
+# Citation: very brief "dead" from tracking/edge flicker is not a referee stoppage.
+DEFAULT_USE_DEAD_BRIDGE = True
+DEFAULT_MAX_DEAD_BRIDGE_FRAMES = 25  # 1.0 s at 25 fps
 
 
 def graded_mask(n_frames, game=GAME):
@@ -162,6 +176,11 @@ def label_possession(
     vc_bv_threshold=DEFAULT_VC_BV_THRESHOLD,
     vc_ba_threshold_deg=DEFAULT_VC_BA_THRESHOLD_DEG,
     vc_gap=DEFAULT_VC_GAP,
+    use_control_confirm=DEFAULT_USE_CONTROL_CONFIRM,
+    confirm_frames=DEFAULT_CONFIRM_FRAMES,
+    confirm_passes=DEFAULT_CONFIRM_PASSES,
+    use_dead_bridge=DEFAULT_USE_DEAD_BRIDGE,
+    max_dead_bridge_frames=DEFAULT_MAX_DEAD_BRIDGE_FRAMES,
 ):
     """Return length-n array of 'H'/'A'/'D'/'X'.
 
@@ -177,6 +196,9 @@ def label_possession(
     vc_gap: off | reappear | edge. reappear lets the nearby team open a switch
         in the control window after a live missing gap. edge also requires the
         ball direction to change across that gap. Zone radius stays 1 m.
+    use_control_confirm: after gap-bridge, revert sandwich H/A spells that lack
+        duration or same-team pass evidence (T27; default off).
+    use_dead_bridge: after confirm, fill brief D between same H/A (T32).
 
     graded: optional bool mask; default = BAR-ATH half video blocks. External
     games pass an all-True (or period) mask so graded_mask(game) is not used.
@@ -515,10 +537,137 @@ def label_possession(
     if gap_mode != "off":
         labels = _apply_gap_bridge(labels, ball_present, graded, gap_mode)
 
+    if use_control_confirm:
+        labels = _confirm_control(
+            labels, features, graded,
+            confirm_frames=confirm_frames,
+            confirm_passes=confirm_passes,
+        )
+
+    if use_dead_bridge:
+        labels = _bridge_short_dead(
+            labels, graded, max_dead_bridge_frames)
+
     if min_spell_frames > 1:
         labels = _merge_short_spells(labels, graded, min_spell_frames)
 
     return labels
+
+
+def _confirm_control(labels, features, graded,
+                     confirm_frames=DEFAULT_CONFIRM_FRAMES,
+                     confirm_passes=DEFAULT_CONFIRM_PASSES):
+    """Revert sandwich H/A spells that lack control evidence.
+
+    A sandwich is H-A-H or A-H-A (skipping X; D / ungraded breaks the sandwich).
+    Keep the middle spell if duration >= confirm_frames or it contains at least
+    confirm_passes same-team hops from detect_same_team_travel; otherwise
+    relabel it to the surrounding team (possession stays with the last team).
+    """
+    out = np.asarray(labels, dtype=object).copy()
+    graded = np.asarray(graded, dtype=bool)
+    n = len(out)
+    confirm_frames = max(1, int(confirm_frames))
+    confirm_passes = max(1, int(confirm_passes))
+
+    # Graded runs: [start, end) with constant label.
+    runs = []
+    i = 0
+    while i < n:
+        if not graded[i]:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and graded[j] and out[j] == out[i]:
+            j += 1
+        runs.append((i, j, out[i]))
+        i = j
+
+    dead_mask = out == LABEL_D
+    hops = detect_same_team_travel(
+        features, graded=graded, dead_mask=dead_mask)
+    hop_starts = np.asarray([c.start_frame for c in hops], dtype=np.int64)
+    hop_ends = np.asarray([c.end_frame for c in hops], dtype=np.int64)
+    hop_teams = np.asarray(
+        [LABEL_H if c.team == HOME else LABEL_A for c in hops], dtype=object)
+
+    def _live_neighbor(idx, direction):
+        k = idx + direction
+        while 0 <= k < len(runs):
+            lab = runs[k][2]
+            if lab == LABEL_D:
+                return None
+            if lab in (LABEL_H, LABEL_A):
+                return lab
+            # skip X
+            k += direction
+        return None
+
+    def _pass_count(a, b, team):
+        if len(hop_starts) == 0:
+            return 0
+        # Hop fully inside the spell interval [a, b).
+        return int(np.sum(
+            (hop_starts >= a) & (hop_ends < b) & (hop_teams == team)))
+
+    for r, (a, b, team) in enumerate(runs):
+        if team not in (LABEL_H, LABEL_A):
+            continue
+        prev = _live_neighbor(r, -1)
+        nxt = _live_neighbor(r, 1)
+        if prev is None or nxt is None or prev != nxt or prev == team:
+            continue
+        duration = b - a
+        n_pass = _pass_count(a, b, team)
+        if duration >= confirm_frames or n_pass >= confirm_passes:
+            continue
+        out[a:b] = prev
+    return out
+
+
+def _bridge_short_dead(labels, graded, max_dead_frames=DEFAULT_MAX_DEAD_BRIDGE_FRAMES):
+    """Fill brief D runs sandwiched by the same H/A team.
+
+    Far from T27 (no pass/travel evidence). Rationale: a sub-second D between
+    the same live team is often tracking/edge flicker, not a referee stoppage.
+    Longer D and D between different teams are left alone.
+    """
+    out = np.asarray(labels, dtype=object).copy()
+    graded = np.asarray(graded, dtype=bool)
+    n = len(out)
+    max_dead = max(1, int(max_dead_frames))
+
+    runs = []
+    i = 0
+    while i < n:
+        if not graded[i]:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and graded[j] and out[j] == out[i]:
+            j += 1
+        runs.append((i, j, out[i]))
+        i = j
+
+    def _live_neighbor(idx, direction):
+        k = idx + direction
+        while 0 <= k < len(runs):
+            lab = runs[k][2]
+            if lab == LABEL_D:
+                return None
+            if lab in (LABEL_H, LABEL_A):
+                return lab
+            k += direction
+        return None
+
+    for r, (a, b, team) in enumerate(runs):
+        if team != LABEL_D or (b - a) >= max_dead:
+            continue
+        prev = _live_neighbor(r, -1)
+        nxt = _live_neighbor(r, 1)
+        if prev is not None and prev == nxt:
+            out[a:b] = prev
+    return out
 
 
 def _apply_gap_bridge(labels, ball_present, graded, mode):
@@ -610,7 +759,7 @@ def splice_vc_on_visible(features, graded=None, game=None, merge_after=True, **k
     kwargs are the surrounding rules (sm_v1_5 or sm_v1_6). The visible pass forces
     the possession-zone gain and leaves the gap-edge modes off. Missing frames,
     including the way the base model fills a dark gap, are copied from the base
-    pass. merge_after runs the short-spell merge once on the joined row.
+    pass. Post-steps (control-confirm, dead-bridge) and merge_after run once on the join.
     """
     if game is None:
         game = kwargs.pop("game", GAME)
@@ -618,21 +767,42 @@ def splice_vc_on_visible(features, graded=None, game=None, merge_after=True, **k
         kwargs.pop("game", None)
     if graded is None:
         graded = graded_mask(int(features["n_frames"]), game)
+    graded_arr = np.asarray(graded, dtype=bool)
     base_kw = dict(kwargs)
     base_kw.pop("vc_splice", None)
+    use_confirm = bool(base_kw.pop(
+        "use_control_confirm", DEFAULT_USE_CONTROL_CONFIRM))
+    confirm_frames = int(base_kw.pop("confirm_frames", DEFAULT_CONFIRM_FRAMES))
+    confirm_passes = int(base_kw.pop("confirm_passes", DEFAULT_CONFIRM_PASSES))
+    use_bridge = bool(base_kw.pop(
+        "use_dead_bridge", DEFAULT_USE_DEAD_BRIDGE))
+    max_bridge = int(base_kw.pop(
+        "max_dead_bridge_frames", DEFAULT_MAX_DEAD_BRIDGE_FRAMES))
+    # Sub-passes skip post-steps; apply once on the joined row.
+    base_kw["use_control_confirm"] = False
+    base_kw["use_dead_bridge"] = False
     base_kw["use_vc_possession"] = False
     base_kw["vc_gap"] = "off"
     vc_kw = dict(base_kw)
     vc_kw["use_vc_possession"] = True
-    base = label_possession(features, game=game, graded=graded, **base_kw)
-    vc = label_possession(features, game=game, graded=graded, **vc_kw)
+    base = label_possession(features, game=game, graded=graded_arr, **base_kw)
+    vc = label_possession(features, game=game, graded=graded_arr, **vc_kw)
     present = np.asarray(features["ball_present"], dtype=bool)
     out = np.array(base, copy=True)
     out[present] = np.asarray(vc)[present]
+    if use_confirm:
+        out = _confirm_control(
+            out, features, graded_arr,
+            confirm_frames=confirm_frames,
+            confirm_passes=confirm_passes,
+        )
+    if use_bridge:
+        out = _bridge_short_dead(out, graded_arr, max_bridge)
     if merge_after:
-        min_spell = int(base_kw.get("min_spell_frames", DEFAULT_MIN_SPELL_FRAMES))
+        min_spell = int(kwargs.get(
+            "min_spell_frames", DEFAULT_MIN_SPELL_FRAMES))
         if min_spell > 1:
-            out = _merge_short_spells(out, np.asarray(graded, dtype=bool), min_spell)
+            out = _merge_short_spells(out, graded_arr, min_spell)
     return out
 
 
@@ -657,6 +827,11 @@ def params_dict(
     vc_bv_threshold=DEFAULT_VC_BV_THRESHOLD,
     vc_ba_threshold_deg=DEFAULT_VC_BA_THRESHOLD_DEG,
     vc_gap=DEFAULT_VC_GAP,
+    use_control_confirm=DEFAULT_USE_CONTROL_CONFIRM,
+    confirm_frames=DEFAULT_CONFIRM_FRAMES,
+    confirm_passes=DEFAULT_CONFIRM_PASSES,
+    use_dead_bridge=DEFAULT_USE_DEAD_BRIDGE,
+    max_dead_bridge_frames=DEFAULT_MAX_DEAD_BRIDGE_FRAMES,
 ):
     return {
         "control_frames": control_frames,
@@ -679,4 +854,9 @@ def params_dict(
         "vc_bv_threshold": vc_bv_threshold,
         "vc_ba_threshold_deg": vc_ba_threshold_deg,
         "vc_gap": vc_gap,
+        "use_control_confirm": use_control_confirm,
+        "confirm_frames": confirm_frames,
+        "confirm_passes": confirm_passes,
+        "use_dead_bridge": use_dead_bridge,
+        "max_dead_bridge_frames": max_dead_bridge_frames,
     }

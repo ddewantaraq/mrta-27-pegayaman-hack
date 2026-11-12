@@ -1,8 +1,8 @@
 """T27: conservative same-team pass-like travel candidates.
 
-Pure feature-level detector: no file IO, no ground truth, no mutation of predictions.
+Feature-level detector used by state_machine._confirm_control as a pass counter.
 Uses two observed ball contacts and a plausible straight-line travel speed.
-It does NOT establish that a pass happened; a candidate is evidence only.
+A candidate is evidence only — not proof that a pass happened.
 """
 from dataclasses import dataclass
 import math

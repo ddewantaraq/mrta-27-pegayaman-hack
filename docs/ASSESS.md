@@ -2,7 +2,7 @@
 
 We do **not** keep/drop from the public 5-minute board. Run both tracks when judging a candidate.
 
-**Approved best:** `evaluation/results/LATEST` (one line → currently `sm_v1_7_compliant.csv`). Both tracks compare **cand vs LATEST vs smooth50**. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+**Approved best:** `evaluation/results/LATEST` (one line → currently `sm_v1_8_compliant.csv`). Both tracks compare **cand vs LATEST vs smooth50**. Promote by editing `LATEST` only when RESULTS keeps a newer model.
 
 ## Track A — local structure (BAR-ATH CSV, no GT)
 
@@ -55,4 +55,6 @@ Auto predict writes the **next version after LATEST** (prefer bare `sm_v*.csv`; 
 3. Track B if the change touches who has the ball / missing frames  
 4. Log model version in [../team/RESULTS.md](../team/RESULTS.md); update `LATEST` only on promote  
 
-`sm_v1_7` background: [algorithms/vidal-codina.md](algorithms/vidal-codina.md).
+`sm_v1_8` (D-bridge): [algorithms/dead-bridge.md](algorithms/dead-bridge.md).  
+`sm_v1_7` (VC): [algorithms/vidal-codina.md](algorithms/vidal-codina.md).  
+T27 closed: [algorithms/controlled-possession.md](algorithms/controlled-possession.md).

@@ -42,6 +42,11 @@ from state_machine import (  # noqa: E402
     DEFAULT_STILL_NEAR_EDGE_FRAMES,
     DEFAULT_STILL_SPEED_M,
     DEFAULT_USE_MAJORITY_NEAR,
+    DEFAULT_USE_CONTROL_CONFIRM,
+    DEFAULT_CONFIRM_FRAMES,
+    DEFAULT_CONFIRM_PASSES,
+    DEFAULT_USE_DEAD_BRIDGE,
+    DEFAULT_MAX_DEAD_BRIDGE_FRAMES,
     DEFAULT_VC_SPLICE,
     label_possession,
     splice_vc_on_visible,
@@ -128,6 +133,8 @@ def sm_v1_3_kwargs():
         long_gap_dead_frames=0,
         # BAR-ATH published kickoff frames must not apply on Metrica timelines
         half_kickoff_reset=False,
+        use_control_confirm=False,
+        use_dead_bridge=False,
     )
 
 
@@ -357,9 +364,18 @@ def evaluate_vc_splice(root):
 
 def kwargs_for_version(major, minor):
     """Metrica kwargs for an approved model version. Extend when promoting."""
+    if (major, minor) == (1, 8):
+        kw = sm_v1_5_kwargs()
+        kw["vc_splice"] = True
+        kw["use_control_confirm"] = False
+        kw["use_dead_bridge"] = True
+        kw["max_dead_bridge_frames"] = DEFAULT_MAX_DEAD_BRIDGE_FRAMES
+        return kw
     if (major, minor) == (1, 7):
         kw = sm_v1_5_kwargs()
         kw["vc_splice"] = True
+        kw["use_control_confirm"] = False
+        kw["use_dead_bridge"] = False
         return kw
     if (major, minor) in ((1, 5), (1, 6)):
         return sm_v1_5_kwargs()
@@ -371,6 +387,11 @@ def current_cand_kwargs():
     """Live predict defaults on Metrica (BAR-ATH kickoff stays off)."""
     kw = sm_v1_5_kwargs()
     kw["vc_splice"] = DEFAULT_VC_SPLICE
+    kw["use_control_confirm"] = DEFAULT_USE_CONTROL_CONFIRM
+    kw["confirm_frames"] = DEFAULT_CONFIRM_FRAMES
+    kw["confirm_passes"] = DEFAULT_CONFIRM_PASSES
+    kw["use_dead_bridge"] = DEFAULT_USE_DEAD_BRIDGE
+    kw["max_dead_bridge_frames"] = DEFAULT_MAX_DEAD_BRIDGE_FRAMES
     return kw
 
 
