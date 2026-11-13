@@ -4,7 +4,7 @@
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** restored **`sm_v1`** → … → **`sm_v1_3`** → **`sm_v1_5`** → **`sm_v1_6`** → **`sm_v1_7`** (VC on visible + sm_v1_6 on missing). **Approved best:** `evaluation/results/LATEST` → `sm_v1_7_compliant.csv`. **`sm_v1_4`** soft ST is archived.
+- **Forward path:** … → **`sm_v1_7`** (VC splice) → **`sm_v1_8`** (short same-team D-sandwich bridge ≤25f). **Approved best:** `evaluation/results/LATEST` → `sm_v1_8_compliant.csv`. **`sm_v1_4`** soft ST archived; T27 control-confirm closed not promoted.
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process. Auto predict floors on **LATEST**, not max bare archive.
 - **How we assess (not Oct):** two tracks via `assess.sh` — **A** and **B** both **cand vs LATEST vs smooth50** (A = structure CSV; B = Metrica H/A). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
@@ -41,7 +41,8 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-07 | sm_v1_4_compliant | E1 | 0.6189 | 0.3043 | 29 | 8.9 | Compliant soft ST; ≠ Oct archive sm_v1_4; log only; later archived vs sm_v1_3 structure |
 | 2026-11-07 | sm_v1_5_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Compliant missing-ball H/A (Metrica external); ≠ Oct archive sm_v1_5; log only |
 | 2026-11-08 | sm_v1_6_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Half-kickoff reset; ≠ Oct archive; log only |
-| 2026-11-09 | sm_v1_7_compliant | E1 | 0.6090 | 0.3238 | 25 | 10.4 | Active forward path; ≠ Oct archive; public numbers log only |
+| 2026-11-09 | sm_v1_7_compliant | E1 | 0.6090 | 0.3238 | 25 | 10.4 | Prior LATEST; public numbers log only |
+| 2026-11-12 | sm_v1_8_compliant | E1 | — | — | — | — | **LATEST**; T32 D-bridge≤25f; local spells 359 / mean 13.8; Metrica spellF1 0.491; public log TBD |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.
@@ -75,6 +76,9 @@ Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are log
 | 2026-11-07 | Compliant sm_v1_5 (T28): backdate-switch + gap-bridge mid on sm_v1_3 base; Smart Tagging off. External Metrica: mean spellF1 0.314→0.370, hidden-frame team acc 0.505→0.510; LOGO both games. Local vs sm_v1_3: n_spells 428→421; mean dur 11.73→11.92; short&lt;25f 24→16; X/D flat. ≠ Oct archive sm_v1_5. |
 | 2026-11-08 | Compliant sm_v1_6 (T29): clear last_live at HT; D on half-2 graded before published 2nd KO (113742); seed opposite of 1st KO team. Local vs sm_v1_5: D 33212→35660; n_sp 421→416; mean 11.92→11.83; s12/s25/X flat; ≪ smooth50. Sanity: 1st live A → 2nd KO H. |
 | 2026-11-09 | `sm_v1_7_compliant.csv` on `newrules#1` (VC on visible + sm_v1_6 on missing + half-kickoff-reset). Oct `sm_v1_7.csv` archive-only, **not from this branch**. Local vs sm_v1_6: n_sp 416→406; mean 11.83→12.11; s12 6→4; s25 16→11; D flat 35660; X 177→281; ≪ smooth50. Metrica: spellF1 0.429 / hidden 0.512 vs sm_v1_5. **Promoted** to forward path. Assess: [../docs/ASSESS.md](../docs/ASSESS.md). |
+| 2026-11-12 | T27 pass-travel fill (`_apply_pass_travel`) abandoned: force-fill worse; X-only no-op. |
+| 2026-11-12 | T27 redesign `_confirm_control`. Track A ↑; Metrica spellF1 ↓. **Closed not promoted.** |
+| 2026-11-12 | T32 `_bridge_short_dead` (max 25f, same-team D sandwich). Track A: spells 406→359, mean 12.11→13.76, s25 11→9. Track B: spellF1 0.429→0.491, hidden flat, both games. **Promoted** `sm_v1_8_compliant.csv` → LATEST. [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md). |
 
 ---
 
@@ -106,3 +110,6 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-09 | Vidal-Codina 2022 possession-zone gain as cand, on the sm_v1_5 rules | **no** | Paper §2.3; published radii only. Metrica spellF1↑ but hidden↓. Full table: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §1. |
 | 2026-11-09 | VC gap edges at pz=1.0 m: reappear / edge | **no** | SpellF1↑ hidden↓ both games. [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §2. |
 | 2026-11-09 | **sm_v1_7**: Vidal-Codina on visible frames; missing frames stay sm_v1_5 / sm_v1_6 | **yes (default)** | Metrica vs sm_v1_5: spellF1 0.370→0.429, hidden 0.510→0.512, both games. Local vs sm_v1_6: spells 416→406, mean 11.83→12.11, short&lt;25f 16→11; ≪ smooth50. ≠ Oct archive `sm_v1_7.csv`. Rollback → `sm_v1_6`. [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §3. |
+| 2026-11-12 | T27 pass-travel post-fill (`--pass-travel`) | **no** | Hop fill abandoned. |
+| 2026-11-12 | T27 control-confirm sandwich gate | **no** | Track B lost. Closed. |
+| 2026-11-12 | **sm_v1_8** T32 short D-sandwich bridge (≤25f, same H/A) | **yes (default)** | Tracking flicker ≠ stoppage. Track A + B beat sm_v1_7. Rollback `--no-dead-bridge`. [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md). |

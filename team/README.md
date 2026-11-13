@@ -17,7 +17,7 @@ Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](
 | Features / rules | `starter/features.py`, `state_machine.py` |
 | Public scorer | optional `--public-log` / `PUBLIC_LOG=1` (not a keep gate) |
 
-**Current code default / approved best:** **`sm_v1_7`** (`evaluation/results/LATEST` → `sm_v1_7_compliant.csv`). Assess both tracks as **cand vs LATEST vs smooth50**. Rollback to **`sm_v1_6`**: `--no-vc-splice` (implementation flag) / `--no-half-kickoff-reset` / `--no-backdate-switch --gap-bridge off`. Oct archive rows are **not** the forward path. Algorithm note: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
+**Code default / approved best:** **`sm_v1_8`** (`evaluation/results/LATEST` → `sm_v1_8_compliant.csv`). Rollback bridge: `--no-dead-bridge` → sm_v1_7. Assess **cand vs LATEST vs smooth50**. Notes: [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md) · [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
 
 **Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
 

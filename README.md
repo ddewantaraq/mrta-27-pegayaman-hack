@@ -97,7 +97,7 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork includes a possession **state machine** over tactical ATD.
-**Active / forward path:** compliant **`sm_v1_7`** (Vidal-Codina on visible + sm_v1_6 on missing). Approved best pointer: `evaluation/results/LATEST` → `sm_v1_7_compliant.csv`. Rollback → `sm_v1_6`.
+**Active / forward path:** compliant **`sm_v1_8`** (sm_v1_7 + short same-team D-sandwich bridge ≤1 s). Approved best: `evaluation/results/LATEST` → `sm_v1_8_compliant.csv`. Rollback → `--no-dead-bridge` (sm_v1_7).
 We do **not** tune parameters on the public possession ground truth (organiser clarification).
 
 ```bash
@@ -106,9 +106,9 @@ pip install -r requirements.txt
 # unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
 
 # Fixed approved artifact (recommended when regenerating LATEST):
-python starter/predict_v1.py --out evaluation/results/sm_v1_7_compliant.csv
-python evaluation/validate_submission.py evaluation/results/sm_v1_7_compliant.csv
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv   # Track A + B (cand vs LATEST vs smooth50)
+python starter/predict_v1.py --out evaluation/results/sm_v1_8_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v1_8_compliant.csv
+bash assess.sh evaluation/results/sm_v1_8_compliant.csv   # Track A + B (cand vs LATEST vs smooth50)
 
 # Or one-shot: next version after LATEST, then assess:
 bash predict_v1.sh            # Mac / Linux / Git Bash

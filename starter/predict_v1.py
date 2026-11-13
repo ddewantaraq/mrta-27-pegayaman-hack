@@ -8,9 +8,9 @@ By default writes the next file after evaluation/results/LATEST (approved best):
   only when that bare name already exists. Pass --out PATH to force a path.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v1_7 (sm_v1_6 + Vidal-Codina gain where the ball is
-visible; sm_v1_6 labels where it is missing). Rollback splice:
---no-vc-splice. Rollback kickoff: --no-half-kickoff-reset.
+Defaults = compliant sm_v1_8 (sm_v1_7 + short D-sandwich bridge ≤25f).
+Rollback bridge: --no-dead-bridge. T27 --control-confirm stays off.
+Rollback splice: --no-vc-splice. Rollback kickoff: --no-half-kickoff-reset.
 """
 
 from __future__ import print_function
@@ -67,6 +67,11 @@ from state_machine import (  # noqa: E402
     DEFAULT_VC_BV_THRESHOLD,
     DEFAULT_VC_GAP,
     DEFAULT_VC_SPLICE,
+    DEFAULT_USE_CONTROL_CONFIRM,
+    DEFAULT_CONFIRM_FRAMES,
+    DEFAULT_CONFIRM_PASSES,
+    DEFAULT_USE_DEAD_BRIDGE,
+    DEFAULT_MAX_DEAD_BRIDGE_FRAMES,
     label_possession,
     params_dict,
     splice_vc_on_visible,
@@ -235,6 +240,45 @@ def main():
         action="store_false",
         help="one state machine only (sm_v1_6 when kickoff reset is on)",
     )
+    parser.add_argument(
+        "--control-confirm",
+        dest="use_control_confirm",
+        action="store_true",
+        default=DEFAULT_USE_CONTROL_CONFIRM,
+        help="revert sandwich spells lacking duration/pass evidence (off by default)",
+    )
+    parser.add_argument(
+        "--no-control-confirm",
+        dest="use_control_confirm",
+        action="store_false",
+        help="disable control-confirm (default)",
+    )
+    parser.add_argument(
+        "--confirm-frames", type=int, default=DEFAULT_CONFIRM_FRAMES,
+        help="min sandwich duration frames to keep a turnover (default 75 = 3 s)",
+    )
+    parser.add_argument(
+        "--confirm-passes", type=int, default=DEFAULT_CONFIRM_PASSES,
+        help="min same-team hops inside sandwich to keep a turnover (default 3)",
+    )
+    parser.add_argument(
+        "--dead-bridge",
+        dest="use_dead_bridge",
+        action="store_true",
+        default=DEFAULT_USE_DEAD_BRIDGE,
+        help="fill brief D between same H/A (T32 sm_v1_8 candidate)",
+    )
+    parser.add_argument(
+        "--no-dead-bridge",
+        dest="use_dead_bridge",
+        action="store_false",
+        help="disable short D-sandwich bridge",
+    )
+    parser.add_argument(
+        "--max-dead-bridge-frames", type=int,
+        default=DEFAULT_MAX_DEAD_BRIDGE_FRAMES,
+        help="max D length to bridge between same team (default 25 = 1 s)",
+    )
     args = parser.parse_args()
 
     version = None
@@ -288,6 +332,11 @@ def main():
         vc_bv_threshold=args.vc_bv_threshold,
         vc_ba_threshold_deg=args.vc_ba_threshold_deg,
         vc_gap=args.vc_gap,
+        use_control_confirm=args.use_control_confirm,
+        confirm_frames=args.confirm_frames,
+        confirm_passes=args.confirm_passes,
+        use_dead_bridge=args.use_dead_bridge,
+        max_dead_bridge_frames=args.max_dead_bridge_frames,
     )
     params["vc_splice"] = args.vc_splice
     print("state_machine params: {}".format(params))
@@ -316,6 +365,11 @@ def main():
         vc_bv_threshold=args.vc_bv_threshold,
         vc_ba_threshold_deg=args.vc_ba_threshold_deg,
         vc_gap=args.vc_gap,
+        use_control_confirm=args.use_control_confirm,
+        confirm_frames=args.confirm_frames,
+        confirm_passes=args.confirm_passes,
+        use_dead_bridge=args.use_dead_bridge,
+        max_dead_bridge_frames=args.max_dead_bridge_frames,
     )
     if args.vc_splice:
         labels = splice_vc_on_visible(features, **label_kwargs)
