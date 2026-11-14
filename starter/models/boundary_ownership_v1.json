@@ -1,0 +1,69 @@
+{
+  "schema": "dual_head_boundary_set_v1_reordered158",
+  "parameters_sha256": "b790ac02464e0d9b6d28961ab5c28b80f9e3b87854d2a3924793c520199e467c",
+  "teacher_parameters": "residual_ownership_v1.npz",
+  "teacher_sha256": "73e1d6ab0e1bf57dee53b0313b6f82dad2bc7f0c19466f7ba5342ce1cec8d5a7",
+  "training_games": [
+    "Sportec J03WOH",
+    "Sportec J03WN1",
+    "Sportec J03WOY",
+    "Metrica Sample_Game_1"
+  ],
+  "training": {
+    "seed": 373,
+    "epochs": 12,
+    "batches_per_epoch": 80,
+    "batch_size": 4,
+    "sequence_5hz_samples": 512,
+    "supervised_center_samples": 256,
+    "optimizer": "AdamW",
+    "learning_rate": 0.0002,
+    "weight_decay": 0.0001,
+    "boundary_sigma_original_frames": 5,
+    "boundary_radius_original_frames": 15,
+    "boundary_positive_weight": 10,
+    "boundary_loss_weight": 0.2,
+    "natural_sampling_weight": 3,
+    "dropout_seconds": [
+      0,
+      2,
+      5,
+      10,
+      30
+    ],
+    "dropout_seed": 73
+  },
+  "inference": {
+    "ensemble_logit_weight": 0.5,
+    "boundary_probability_clip": [
+      0.001,
+      0.3
+    ],
+    "boundary_prior_correction": "subtract log10",
+    "visible_rule": "raw ensemble sign",
+    "missing_rule": "boundary-dependent Viterbi within live spans and periods",
+    "retain_baseline_D_X": true,
+    "merge_frames": 18
+  },
+  "target_annotations_used": false,
+  "public_challenge_score_used": false,
+  "official_score_feedback_available": false,
+  "research_note": "docs/algorithms/boundary-ownership-research.md",
+  "reference_sources": [
+    "https://openaccess.thecvf.com/content/WACV2021/html/Ishikawa_Alleviating_Over-Segmentation_Errors_by_Detecting_Action_Boundaries_WACV_2021_paper.html",
+    "https://github.com/metrica-sports/sample-data",
+    "https://doi.org/10.1038/s41597-025-04505-y"
+  ],
+  "inference_code_sha256": {
+    "starter/numpy_boundary_ownership.py": "618369de01f45d3632740ef1ea9d1039744c91084934f773383c512c70ad6f7c",
+    "starter/boundary_ensemble_model.py": "c7222d6da11ed1be68eb1ce42cbb03e9fa7a12447d334002549f8b028d7fd693",
+    "starter/numpy_residual_set.py": "64312923cd8f3d0b1e7b5eaf16b8779f3c3f4a3dcc2c8e91c57a9666842724fa",
+    "starter/numpy_set_temporal.py": "7b32c99c90d30feadbf6fc645095d7f7256f15571afd0028218557d27d30568c",
+    "starter/ownership_context.py": "70f30cd44f909f21206f704f8028c304e5c148bdee0d6dede88c7e6a04e85b85",
+    "starter/player_nodes.py": "dea93d66d94c9c355c52744eeb8617adc5231bed4a72a4c27cefb975467fc5e9"
+  },
+  "approved_version": "2.3",
+  "submission_sha256": "c6d6ecb8b04d8dba1af26d944c857a94bd0c0a930e24d5f554d4103aa250d9c6",
+  "tests_passed": 39,
+  "rollback_v2_2_byte_identical": true
+}

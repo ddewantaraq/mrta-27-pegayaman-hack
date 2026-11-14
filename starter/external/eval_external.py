@@ -53,6 +53,19 @@ from state_machine import (  # noqa: E402
 )
 from baseline import smooth  # noqa: E402
 from features import HOME, AWAY, NOBODY  # noqa: E402
+from dead_ball_model import (  # noqa: E402
+    DEFAULT_MODEL_PATH, DEFAULT_USE_LEARNED_DEAD, label_with_dead_model,
+)
+from boosted_dead_model import (  # noqa: E402
+    DEFAULT_BOOSTED_MODEL_PATH, DEFAULT_USE_BOOSTED_DEAD, label_with_boosted_model,
+)
+from set_ownership_model import (DEFAULT_SET_OWNERSHIP_PATH, DEFAULT_USE_SET_OWNERSHIP,
+                                 DEFAULT_SET_OWNERSHIP_POLICY,
+                                 apply_set_ownership)
+from residual_ownership_model import (DEFAULT_RESIDUAL_MODEL_PATH, DEFAULT_USE_RESIDUAL_OWNERSHIP,
+                                      apply_residual_ownership)
+from boundary_ensemble_model import (DEFAULT_BOUNDARY_MODEL_PATH,DEFAULT_USE_BOUNDARY_ENSEMBLE,
+                                     apply_boundary_ensemble)
 
 GAME_NAMES = sorted(GAMES.keys())
 
@@ -140,6 +153,35 @@ def sm_v1_3_kwargs():
 
 def run_labeller(features, graded, kwargs):
     kw = dict(kwargs)
+    boundary_model=kw.pop('boundary_ensemble_model',None)
+    if boundary_model is not None:
+        from player_node_data import load_player_nodes
+        nodes=load_player_nodes(str(features['game']))
+        reference=run_labeller(features,graded,kw)
+        return apply_boundary_ensemble(features,reference,graded,nodes,boundary_model,
+                                        minimum=kw.get('min_spell_frames',DEFAULT_MIN_SPELL_FRAMES))
+    residual_model = kw.pop('residual_ownership_model',None)
+    if residual_model is not None:
+        from player_node_data import load_player_nodes
+        nodes = load_player_nodes(str(features['game']))
+        reference = run_labeller(features,graded,kw)
+        return apply_residual_ownership(features,reference,graded,nodes,residual_model,
+                                        minimum=kw.get('min_spell_frames',DEFAULT_MIN_SPELL_FRAMES))
+    team_model = kw.pop('set_ownership_model', None)
+    team_policy = kw.pop('set_ownership_policy', 'full')
+    if team_model is not None:
+        from player_node_data import load_player_nodes
+        nodes = load_player_nodes(str(features['game']))
+        baseline = run_labeller(features, graded, kw)
+        return apply_set_ownership(features, baseline, graded, nodes, team_model,
+                                   minimum=kw.get('min_spell_frames', DEFAULT_MIN_SPELL_FRAMES),
+                                   policy=team_policy)
+    boosted_model = kw.pop('boosted_dead_model', None)
+    if boosted_model is not None:
+        return label_with_boosted_model(features, graded=graded, model_path=boosted_model, **kw)
+    learned_model = kw.pop('learned_dead_model', None)
+    if learned_model is not None:
+        return label_with_dead_model(features, graded=graded, model_path=learned_model, **kw)
     splice = kw.pop("vc_splice", False)
     if splice:
         return splice_vc_on_visible(features, graded=graded, merge_after=True, **kw)
@@ -364,6 +406,34 @@ def evaluate_vc_splice(root):
 
 def kwargs_for_version(major, minor):
     """Metrica kwargs for an approved model version. Extend when promoting."""
+    if (major,minor)==(2,3):
+        kw=kwargs_for_version(1,10)
+        kw['boundary_ensemble_model']=DEFAULT_BOUNDARY_MODEL_PATH
+        return kw
+    if (major,minor) == (2,2):
+        kw = kwargs_for_version(1,10)
+        kw['residual_ownership_model'] = DEFAULT_RESIDUAL_MODEL_PATH
+        return kw
+    if (major, minor) == (2, 0):
+        kw = kwargs_for_version(1, 10)
+        kw['set_ownership_model'] = DEFAULT_SET_OWNERSHIP_PATH
+        return kw
+    if (major, minor) == (2, 1):
+        kw = kwargs_for_version(2, 0)
+        kw['set_ownership_policy'] = 'run90_mean90'
+        return kw
+    if (major, minor) == (1, 10):
+        kw = kwargs_for_version(1, 8)
+        kw['confirm_frames'] = DEFAULT_CONFIRM_FRAMES
+        kw['confirm_passes'] = DEFAULT_CONFIRM_PASSES
+        kw['boosted_dead_model'] = DEFAULT_BOOSTED_MODEL_PATH
+        return kw
+    if (major, minor) == (1, 9):
+        kw = kwargs_for_version(1, 8)
+        kw['confirm_frames'] = DEFAULT_CONFIRM_FRAMES
+        kw['confirm_passes'] = DEFAULT_CONFIRM_PASSES
+        kw['learned_dead_model'] = DEFAULT_MODEL_PATH
+        return kw
     if (major, minor) == (1, 8):
         kw = sm_v1_5_kwargs()
         kw["vc_splice"] = True
@@ -392,6 +462,17 @@ def current_cand_kwargs():
     kw["confirm_passes"] = DEFAULT_CONFIRM_PASSES
     kw["use_dead_bridge"] = DEFAULT_USE_DEAD_BRIDGE
     kw["max_dead_bridge_frames"] = DEFAULT_MAX_DEAD_BRIDGE_FRAMES
+    if DEFAULT_USE_BOOSTED_DEAD:
+        kw['boosted_dead_model'] = DEFAULT_BOOSTED_MODEL_PATH
+    elif DEFAULT_USE_LEARNED_DEAD:
+        kw['learned_dead_model'] = DEFAULT_MODEL_PATH
+    if DEFAULT_USE_SET_OWNERSHIP:
+        kw['set_ownership_model'] = DEFAULT_SET_OWNERSHIP_PATH
+        kw['set_ownership_policy'] = DEFAULT_SET_OWNERSHIP_POLICY
+    if DEFAULT_USE_BOUNDARY_ENSEMBLE:
+        kw['boundary_ensemble_model']=DEFAULT_BOUNDARY_MODEL_PATH
+    elif DEFAULT_USE_RESIDUAL_OWNERSHIP:
+        kw['residual_ownership_model'] = DEFAULT_RESIDUAL_MODEL_PATH
     return kw
 
 
@@ -409,7 +490,9 @@ def evaluate_cand_vs_latest(root, cand_kwargs, latest_kwargs):
     for game_name in GAME_NAMES:
         print("=== {} assess cand vs LATEST pz=1.0 ===".format(game_name), flush=True)
         feats = extract_metrica_features(
-            game_name, root=root, pz_radius_m=1.0, dz_radius_m=1.0)
+            game_name, root=root, pz_radius_m=1.0, dz_radius_m=1.0,
+            include_motion=('boosted_dead_model' in cand_kwargs or
+                            'boosted_dead_model' in latest_kwargs))
         n = feats["n_frames"]
         gt = build_metrica_gt(game_name, n, root=root)
         graded = np.ones(n, dtype=bool)

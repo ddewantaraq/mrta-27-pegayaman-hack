@@ -1,10 +1,162 @@
 # Results log
 
+### 2026-11-14: sm_v2_3 boundary-aware ownership ensemble — promoted
+
+An ASRF-inspired joint boundary/ownership head is fitted on WOH/WN1/WOY and
+Metrica Game 1 only, initialized from v2.2. Its team logits are equally
+averaged with v2.2; its boundary head controls missing-frame transition costs.
+Observed-ball predictions use raw ensemble signs. Baseline D/X remain.
+
+- Five excluded-fit-match full-timeline suite: spellF1 .580146 -> .599177;
+  hidden accuracy .774845 -> .791608, both improve in every match.
+- Original Metrica protocol: spellF1 .634473 -> .644263, hidden
+  .787772 -> .801381, both improve in each game. Game 1 is training;
+  excluded Game 2 alone .611713 -> .616270 spellF1, .728064 -> .747213 hidden.
+- Reused additional Game 3 validation: suite spellF1 .555991 -> .584742,
+  hidden .688976 -> .711571; natural spellF1 .679070 -> .702290 and hidden
+  .530622 -> .560815. No untouched-test claim. Natural spellF1 regresses
+  slightly on WMX, Metrica 2 and WR9; complete values are in the method note.
+- Challenge: 342 possessions, mean 8.65439 s, <12f 0, <25f 8 (v2.2: 13).
+  Graded D/X remain 84581/281. The merge threshold stays 18 frames.
+- Thirty-nine tests pass. NumPy export max errors 1.44e-6 team and 6.26e-7
+  boundary; natural Metrica 2 packaged labels equal native research labels.
+  Format passes, 199319 rows. Three generations are byte-identical, including
+  default inference without PyTorch. SHA256:
+  `C6D6ECB8B04D8DBA1AF26D944C857A94BD0C0A930E24D5F554D4103AA250D9C6`.
+  `--no-boundary-model` exactly restores v2.2. `LATEST` points to v2.3.
+
+Temporal D correction, blunt short-spell suppression, dense decoding and a
+12.5 Hz correction model were also tested and held/rejected. Details and
+sources: [boundary ownership research](../docs/algorithms/boundary-ownership-research.md).
+Official challenge feedback is unavailable; this is the best tested model,
+not a claim of a known private score or guaranteed win.
+
+### 2026-11-14: sm_v2_2 residual ownership hybrid — promoted on primary metric
+
+The network sees anonymous player geometry/motion, ball context and the
+automatic v1.10 baseline, with a fixed baseline prior. Fit: Sportec
+WOH/WN1/WOY + Metrica Game 1 only. It uses raw visible predictions and
+Viterbi during missing-ball frames, retaining baseline D/X.
+
+- Five excluded-fit-match full-timeline suite: equal-match spellF1
+  .481070 -> .580146; hidden accuracy .665186 -> .774845. Both improve on
+  each match; natural spellF1 also improves on each.
+- Original Metrica protocol: spellF1 .571573 -> .634473, hidden
+  .749873 -> .787772. Both improve in each game. Game 1 is training;
+  excluded Game 2 alone: spellF1 .549717 -> .611713, hidden .687964 -> .728064.
+- Additional Game 3 validation: suite spellF1 .446470 -> .555991, hidden
+  .630178 -> .688976. Natural spellF1 .653978 -> .679070, macroF1
+  .798459 -> .803933, but hidden accuracy .575231 -> .530622.
+  The strict auxiliary natural-hidden criterion **failed**. Promotion is a
+  deliberate tradeoff for the official primary spell metric, not a claim
+  that every diagnostic passed. Game 3 was not untouched after prior trials.
+- Challenge: 319 possessions, mean 9.27837 s, <12f = 0, <25f = 13;
+  graded D/X 84581/281. More <25f spells than v1.10 (2), but fewer than
+  the unrestricted set model (21). No challenge GT/public score was used.
+- 31 tests pass. NumPy/PyTorch maximum logit difference 1.35e-6 on random
+  probes and 1.20e-6 on a full external match; no frame sign differences.
+  Packaged Sportec registry labels equal native research labels exactly.
+  Three challenge generations are byte-identical, including default inference
+  in the base Python environment without importing PyTorch:
+  SHA256 `27EA6EF8745D3D0641C0D50EB127F48D8FC40CD214AEB9DB4066CD3E35E297BA`.
+  Format validation passes, 199319 rows. Rollback `--no-team-model` exactly
+  reproduces v1.10. `LATEST` now points to `sm_v2_2_compliant.csv`.
+
+Details: [temporal ownership research](../docs/algorithms/temporal-ownership-research.md).
+
+The additional official pretrained PathCRF transfer experiment is complete.
+Macro/micro emissions, full dynamic CRF, and observed-team constrained CRF
+were tested without reference episode boundaries. None outperformed the
+residual hybrid on Metrica 2; observed-team CRF suite spellF1 .452605 versus
+the hybrid .517666, with worse natural spellF1 and hidden accuracy. These
+adapters remain research only. All experiment processes have finished.
+
+### 2026-11-14: temporal ownership research — candidates held
+
+At this stage the approved pointer remained sm_v1_10. A geometry-only player-set temporal
+network improves the five-match full-timeline dropout mean spellF1
+.481070 -> .573314, but natural Metrica tracks and the historical protocol
+regress. It is not promoted. A selective segment gate improves development
+results and preserves challenge structure, but fails the additional Metrica 3
+hidden-accuracy check. The research CSV `sm_v2_compliant.csv` is not the best
+approved submission. The later baseline-aware result is recorded above.
+See [temporal ownership research](../docs/algorithms/temporal-ownership-research.md)
+for split provenance, the reserved-test limitations, failed checks and exact
+reproduction hashes. No challenge public possession labels were scored.
+
+### 2026-11-14: sm_v1_10 calibrated mixed-provider boosted model — promoted
+
+Training is still Sportec J03WOH + Metrica Game 1, with no challenge GT/video.
+Numeric tree JSON permits NumPy/pandas-only inference. Training-prior
+correction is derived from fitting labels, not target or validation statistics.
+
+- Track A: sm_v1_9 -> sm_v1_10: 331 -> 294 spells, mean 16.8413 -> 10.0673 s;
+  <12f 3 -> 0, <25f 8 -> 2; graded D 19214 -> 84581, X remains 281.
+  The large D-count change is a material transfer risk, not a tuning target.
+- Original Metrica suite: spellF1 0.496131 -> 0.571573; hidden accuracy
+  0.678216 -> 0.749873. Both metrics improve in both games. Game 1 is training;
+  excluded Game 2 alone: spellF1 0.489793 -> 0.549717, hidden 0.616913 -> 0.687964.
+- Whole-timeline natural + 41% block dropout, five excluded fitting matches:
+  mean spellF1 0.419488 -> 0.481070, hidden 0.610566 -> 0.665186. Both improve
+  separately in Metrica Game 2 and Sportec WMX/WPY/WQQ/WR9. Different protocol:
+  these absolute values must not be mixed with the preceding original suite.
+- Twenty-three tests pass; portable logits match scikit-learn to 1e-12 on
+  16758 probes, including missing routes. Packaged inference reproduces the
+  experimental CSV exactly (SHA256 6CB8F5B98618B890FF2F262304A779430313B014294B8791BBFE84E6D7053AA9).
+  Validation passes, 199319 rows. Rollback `--dead-model logistic` -> sm_v1_9.
+
+Kept for consistent cross-match and cross-provider gains, with prior correction
+and established short-spell rules after the D overlay. Validation matches have
+informed variant selection; none is a pristine test for future development.
+The hidden challenge score/rank is unknown. Research attempts and rejected
+variants are recorded in the [research log](../docs/algorithms/research-round-2026-11-14.md).
+[Final method and reproduction](../docs/algorithms/boosted-dead-ball.md).
+
+### 2026-11-14: sm_v1_9 protected learned dead-ball model — promoted
+
+External-only training: Sportec J03WOH and Metrica Game 1. Excluded from fitting:
+Sportec J03WN1 and Metrica Game 2. No challenge labels/video were used.
+Packaged JSON parameters require no external downloads for inference.
+
+- Track A: spells 359 -> 331, mean 13.7626 -> 16.8413 s,
+  <12f 3 -> 3, <25f 9 -> 8; graded D 35057 -> 19214, X stays 281.
+- Original Metrica suite: mean spellF1 0.490561 -> 0.496131;
+  hidden accuracy 0.511854 -> 0.678216; both games improve both metrics.
+  **Game 1 is training/development, not held out.**
+- Excluded Sportec J03WN1, natural + 41% block dropout:
+  spellF1 0.378973 -> 0.414292; hidden 0.483740 -> 0.548852.
+- Excluded Metrica Game 2, natural + 41% block dropout:
+  spellF1 0.387076 -> 0.393622; hidden 0.503314 -> 0.642444.
+- Full assess command passed against prior LATEST + smooth50. Fifteen tests
+  pass. Submission validates (199319 rows). Packaged/default inference is
+  SHA256-identical to the experimental protected candidate. Legacy core
+  output is unchanged. Rollback: `--no-learned-dead`.
+
+Kept for external evidence and the challenge's live/dead distinction, with
+explicit preservation of previous hidden H/A answers. Lower challenge D count
+is a material transfer risk. No hidden-challenge performance or winning rank
+is established. [Full method/results](../docs/algorithms/learned-dead-ball.md).
+
+Rejected/deferred: same/midpoint gap reconciliation lost hidden accuracy;
+physical-boundary-only change lost Sportec spellF1; unprotected learned model
+had larger spell gains but lost Sportec hidden accuracy. Do not promote them.
+
+### 2026-11-14: visible live-island candidate (not promoted)
+
+Regenerated sm_v1_8: 359 spells, mean 13.7626 s, <12f 3, <25f 9.
+Experimental visible-only D-H/A-D island suppression (<25f): 353 spells,
+mean 13.9870 s, <12f 0, <25f 3. Metrica external mean spellF1
+0.490561 -> 0.492264, improves both games; hidden accuracy unchanged
+0.511854. Kept experimental for the tiny gain; the assessment code actually
+accepts nondecreasing hidden accuracy. This candidate did not change LATEST.
+No challenge GT used. Four boundary tests pass; candidate submission validates.
+See [experiment and reproduction](../docs/algorithms/live-islands.md).
+
 **Metrics only** — no match coordinates, no GT label dumps, no video.
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** … → **`sm_v1_7`** (VC splice) → **`sm_v1_8`** (short same-team D-sandwich bridge ≤25f). **Approved best:** `evaluation/results/LATEST` → `sm_v1_8_compliant.csv`. **`sm_v1_4`** soft ST archived; T27 control-confirm closed not promoted.
+- **Forward path:** … → **`sm_v1_7`** → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** (calibrated boosted live/dead). **Approved best:** `evaluation/results/LATEST` → `sm_v1_10_compliant.csv`. Historical public-GT-era bare files are not this compliant line.
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process. Auto predict floors on **LATEST**, not max bare archive.
 - **How we assess (not Oct):** two tracks via `assess.sh` — **A** and **B** both **cand vs LATEST vs smooth50** (A = structure CSV; B = Metrica H/A). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
@@ -42,7 +194,9 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-07 | sm_v1_5_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Compliant missing-ball H/A (Metrica external); ≠ Oct archive sm_v1_5; log only |
 | 2026-11-08 | sm_v1_6_compliant | E1 | 0.6113 | 0.3111 | 28 | 9.3 | Half-kickoff reset; ≠ Oct archive; log only |
 | 2026-11-09 | sm_v1_7_compliant | E1 | 0.6090 | 0.3238 | 25 | 10.4 | Prior LATEST; public numbers log only |
-| 2026-11-12 | sm_v1_8_compliant | E1 | — | — | — | — | **LATEST**; T32 D-bridge≤25f; local spells 359 / mean 13.8; Metrica spellF1 0.491; public log TBD |
+| 2026-11-12 | sm_v1_8_compliant | E1 | — | — | — | — | Prior LATEST; T32 D-bridge<25f; local spells 359 / mean 13.8; Metrica spellF1 0.491; public log TBD |
+| 2026-11-14 | sm_v1_9_compliant | Codex | — | — | — | — | Prior LATEST; protected learned D; local 331 spells / mean 16.84 / s12 3 / s25 8; external Metrica spellF1 0.4961; Sportec excluded-match spellF1 0.4143 |
+| 2026-11-14 | sm_v1_10_compliant | Codex | — | — | — | — | **LATEST**; calibrated boosted D; local 294 spells / mean 10.07 / s12 0 / s25 2; original Metrica suite 0.5716 (includes training Game 1); five excluded-match whole-timeline suite 0.4811 |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.

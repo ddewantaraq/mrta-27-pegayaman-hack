@@ -2,7 +2,44 @@
 
 We do **not** keep/drop from the public 5-minute board. Run both tracks when judging a candidate.
 
-**Approved best:** `evaluation/results/LATEST` (one line → currently `sm_v1_8_compliant.csv`). Both tracks compare **cand vs LATEST vs smooth50**. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+**Approved best:** `evaluation/results/LATEST`. Both tracks compare **cand vs LATEST vs smooth50**. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+
+**sm_v2_3:** equal-logit ownership ensemble with a learned turnover-boundary
+head. Five excluded-fit-match suite spellF1 .580146 -> .599177 and hidden
+accuracy .774845 -> .791608; both improve on each match. Additional Metrica 3
+suite and natural metrics also improve. The original Metrica protocol improves
+both metrics in both games (Game 1 is training). Some natural Sportec/Metrica 2
+scores regress slightly; these tradeoffs are recorded explicitly. Challenge
+<25f spells decrease 13 -> 8, with zero <12f. Rollback `--no-boundary-model`.
+See [evidence and reproduction](algorithms/boundary-ownership-research.md).
+
+**sm_v2_2:** baseline-aware player-set ownership with raw visible estimates and
+temporal decoding during missing-ball stretches. The five excluded-fit-match
+full-timeline suite improves mean spellF1 .481070 -> .580146 and hidden team
+accuracy .665186 -> .774845. The original protocol improves both metrics in
+both Metrica games (Game 1 is training). Additional Game 3 validation improves
+primary spellF1, but natural missing-ball accuracy declines; the stricter
+auxiliary gate is recorded as failed. Promotion prioritizes the official spell
+metric, which improves on every checked match, including natural conditions.
+Challenge structure has more <25f spells (2 -> 13), with zero <12f spells.
+See [the full evidence and decision](algorithms/temporal-ownership-research.md).
+Rollback: `--no-team-model`. Broader reproduction:
+`python starter/external/evaluate_approved.py --candidate 2.2 --reference 1.10`.
+
+**sm_v1_10:** calibrated mixed-provider boosted live/dead model. The original
+Metrica suite improves vs sm_v1_9 on both metrics in both games, with Game 1
+remaining a training/development check. Additional whole-timeline 41% dropout
+validation improves both metrics on excluded Metrica Game 2 and four Sportec
+matches (J03WMX/J03WPY/J03WQQ/J03WR9). The two dropout protocols have different
+absolute scores; report them separately. Reproduce the broader comparison with
+`python starter/external/evaluate_approved.py --candidate 1.10 --reference 1.9`.
+See [method, tables and transfer risk](algorithms/boosted-dead-ball.md).
+
+**sm_v1_9:** the protected learned dead-ball model uses external Sportec J03WOH
+and Metrica Sample_Game_1 for training. Metrica Game 1 scores are development
+checks, not independent validation. Additional validation uses excluded
+Metrica Game 2 and Sportec J03WN1; both improve spellF1 and hidden accuracy.
+See [method and limitations](algorithms/learned-dead-ball.md).
 
 ## Track A — local structure (BAR-ATH CSV, no GT)
 

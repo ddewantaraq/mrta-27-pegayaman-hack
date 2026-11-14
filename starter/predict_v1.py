@@ -8,7 +8,10 @@ By default writes the next file after evaluation/results/LATEST (approved best):
   only when that bare name already exists. Pass --out PATH to force a path.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v1_8 (sm_v1_7 + short D-sandwich bridge ≤25f).
+Defaults = compliant sm_v2_3 (boosted dead-ball + boundary-aware ownership ensemble).
+Rollback: --no-boundary-model -> sm_v2_2; --no-team-model -> sm_v1_10;
+--dead-model logistic -> sm_v1_9;
+--no-learned-dead -> sm_v1_8.
 Rollback bridge: --no-dead-bridge. T27 --control-confirm stays off.
 Rollback splice: --no-vc-splice. Rollback kickoff: --no-half-kickoff-reset.
 """
@@ -25,6 +28,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 sys.path.insert(0, HERE)
+
+from dead_ball_model import (  # noqa: E402
+    DEFAULT_MODEL_PATH, DEFAULT_USE_LEARNED_DEAD, label_with_dead_model,
+)
+from boosted_dead_model import (  # noqa: E402
+    DEFAULT_BOOSTED_MODEL_PATH, DEFAULT_USE_BOOSTED_DEAD, label_with_boosted_model,
+)
+from set_ownership_model import (DEFAULT_SET_OWNERSHIP_PATH, DEFAULT_USE_SET_OWNERSHIP,
+                                 DEFAULT_SET_OWNERSHIP_POLICY)
+from residual_ownership_model import DEFAULT_RESIDUAL_MODEL_PATH, DEFAULT_USE_RESIDUAL_OWNERSHIP
+from boundary_ensemble_model import DEFAULT_BOUNDARY_MODEL_PATH,DEFAULT_USE_BOUNDARY_ENSEMBLE
 
 from games import GAME  # noqa: E402
 from features import (  # noqa: E402
@@ -92,6 +106,28 @@ def write_submission(path, labels):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--game", default=GAME)
+    parser.add_argument('--no-learned-dead', dest='learned_dead', action='store_false',
+                        default=DEFAULT_USE_LEARNED_DEAD,
+                        help='roll back protected learned dead-ball model to sm_v1_8')
+    parser.add_argument('--dead-model-file', default=DEFAULT_MODEL_PATH,
+                        help='JSON parameters trained on external matches only')
+    parser.add_argument('--dead-model', choices=('legacy', 'logistic', 'boosted'),
+                        default=None, help='explicit live/dead pipeline; preserves legacy rollback')
+    parser.add_argument('--boosted-model-file', default=DEFAULT_BOOSTED_MODEL_PATH,
+                        help='portable boosted numeric-tree parameters')
+    parser.add_argument('--team-model-file', default=None,
+                        help='override NumPy player-set ownership model parameters')
+    parser.add_argument('--no-team-model', action='store_true',
+                        help='disable ownership head; boosted pipeline rolls back to sm_v1_10')
+    parser.add_argument('--residual-team-model-file', default=None,
+                        help='baseline-aware NumPy ownership correction parameters')
+    parser.add_argument('--boundary-team-model-file',default=None,
+                        help='override NumPy boundary-aware ensemble parameters')
+    parser.add_argument('--no-boundary-model',action='store_true',
+                        help='disable the boundary ensemble and use the v2.2 ownership head')
+    parser.add_argument('--team-policy', choices=('full','run90_mean90'),
+                        default=DEFAULT_SET_OWNERSHIP_POLICY,
+                        help='ownership replacement policy; full is the ungated research candidate')
     parser.add_argument(
         "--out", default=None,
         help="submission CSV path; default = next after LATEST (bare, or _compliant if bare exists)",
@@ -238,7 +274,7 @@ def main():
         "--no-vc-splice",
         dest="vc_splice",
         action="store_false",
-        help="one state machine only (sm_v1_6 when kickoff reset is on)",
+        help="one state machine only; add --no-learned-dead for legacy sm_v1_6",
     )
     parser.add_argument(
         "--control-confirm",
@@ -280,6 +316,31 @@ def main():
         help="max D length to bridge between same team (default 25 = 1 s)",
     )
     args = parser.parse_args()
+    if not args.learned_dead and args.dead_model not in (None, 'legacy'):
+        parser.error('--no-learned-dead conflicts with --dead-model logistic/boosted')
+    method = args.dead_model
+    if method is None:
+        method = ('boosted' if DEFAULT_USE_BOOSTED_DEAD else 'logistic') if args.learned_dead else 'legacy'
+    boundary_model_path=args.boundary_team_model_file
+    if args.no_boundary_model and boundary_model_path:
+        parser.error('--no-boundary-model conflicts with --boundary-team-model-file')
+    if (boundary_model_path is None and not args.no_team_model and method=='boosted'
+            and DEFAULT_USE_BOUNDARY_ENSEMBLE and not args.no_boundary_model
+            and not args.team_model_file and not args.residual_team_model_file):
+        boundary_model_path=DEFAULT_BOUNDARY_MODEL_PATH
+    team_model_path = args.team_model_file
+    if args.no_team_model and team_model_path:
+        parser.error('--no-team-model conflicts with --team-model-file')
+    if team_model_path is None and boundary_model_path is None and not args.no_team_model and method == 'boosted' and DEFAULT_USE_SET_OWNERSHIP:
+        team_model_path = DEFAULT_SET_OWNERSHIP_PATH
+    residual_model_path = args.residual_team_model_file
+    if (residual_model_path is None and team_model_path is None and boundary_model_path is None and not args.no_team_model
+            and method == 'boosted' and DEFAULT_USE_RESIDUAL_OWNERSHIP):
+        residual_model_path = DEFAULT_RESIDUAL_MODEL_PATH
+    if residual_model_path and (team_model_path or args.no_team_model):
+        parser.error('Choose one ownership model; --no-team-model disables both')
+    if boundary_model_path and (team_model_path or residual_model_path or args.no_team_model):
+        parser.error('Choose one ownership model; --no-team-model disables ownership corrections')
 
     version = None
     if args.out is None:
@@ -297,6 +358,16 @@ def main():
         dz_radius_m=args.dz_radius_m,
     )
     summarize(features)
+    player_nodes = None
+    if team_model_path or residual_model_path or boundary_model_path:
+        from external.motion_features import challenge_motion
+        print('Extract geometry-only player sets and motion ...')
+        features['player_motion'], player_nodes, features['period'] = challenge_motion(
+            game=args.game, include_nodes=True)
+    elif method == 'boosted':
+        from external.motion_features import challenge_motion
+        print('Extract ball-independent player motion ...')
+        features['player_motion'] = challenge_motion(game=args.game)
 
     set_piece_dead = None
     cap = None if args.full_set_piece_dead else args.set_piece_dead_cap_frames
@@ -339,6 +410,13 @@ def main():
         max_dead_bridge_frames=args.max_dead_bridge_frames,
     )
     params["vc_splice"] = args.vc_splice
+    params['dead_model_kind'] = method
+    params['learned_dead_model'] = args.dead_model_file if method == 'logistic' else None
+    params['boosted_dead_model'] = args.boosted_model_file if method == 'boosted' else None
+    params['set_ownership_model'] = team_model_path
+    params['set_ownership_policy'] = args.team_policy if team_model_path else None
+    params['residual_ownership_model'] = residual_model_path
+    params['boundary_ensemble_model']=boundary_model_path
     print("state_machine params: {}".format(params))
     print("pz_radius_m: {}  dz_radius_m: {}".format(
         args.pz_radius_m, args.dz_radius_m))
@@ -371,10 +449,37 @@ def main():
         use_dead_bridge=args.use_dead_bridge,
         max_dead_bridge_frames=args.max_dead_bridge_frames,
     )
-    if args.vc_splice:
+    if method == 'boosted':
+        labels = label_with_boosted_model(
+            features, model_path=args.boosted_model_file,
+            vc_splice=args.vc_splice, **label_kwargs)
+    elif method == 'logistic':
+        labels = label_with_dead_model(
+            features, model_path=args.dead_model_file,
+            vc_splice=args.vc_splice, **label_kwargs)
+    elif args.vc_splice:
         labels = splice_vc_on_visible(features, **label_kwargs)
     else:
         labels = label_possession(features, **label_kwargs)
+    if team_model_path:
+        from set_ownership_model import apply_set_ownership
+        from state_machine import graded_mask
+        labels = apply_set_ownership(features, labels,
+                                     graded_mask(features['n_frames'], args.game),
+                                     player_nodes, team_model_path,
+                                     minimum=args.min_spell_frames, policy=args.team_policy)
+    if residual_model_path:
+        from residual_ownership_model import apply_residual_ownership
+        from state_machine import graded_mask
+        labels = apply_residual_ownership(features,labels,
+                                          graded_mask(features['n_frames'],args.game),
+                                          player_nodes,residual_model_path,
+                                          minimum=args.min_spell_frames)
+    if boundary_model_path:
+        from boundary_ensemble_model import apply_boundary_ensemble
+        from state_machine import graded_mask
+        labels=apply_boundary_ensemble(features,labels,graded_mask(features['n_frames'],args.game),
+                                       player_nodes,boundary_model_path,minimum=args.min_spell_frames)
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
     rel = os.path.relpath(path, ROOT).replace(os.sep, "/")

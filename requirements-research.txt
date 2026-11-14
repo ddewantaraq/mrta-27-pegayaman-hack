@@ -1,0 +1,6 @@
+# Training/research only; the approved inference path remains numpy + pandas.
+-r requirements-inference.txt
+scikit-learn==1.7.2
+scipy==1.15.3
+joblib==1.5.2
+threadpoolctl==3.6.0

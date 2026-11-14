@@ -17,7 +17,18 @@ Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](
 | Features / rules | `starter/features.py`, `state_machine.py` |
 | Public scorer | optional `--public-log` / `PUBLIC_LOG=1` (not a keep gate) |
 
-**Code default / approved best:** **`sm_v1_8`** (`evaluation/results/LATEST` → `sm_v1_8_compliant.csv`). Rollback bridge: `--no-dead-bridge` → sm_v1_7. Assess **cand vs LATEST vs smooth50**. Notes: [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md) · [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
+**Code default / approved best:** **`sm_v2_3`**, a boundary-aware ownership ensemble
+with calibrated boosted live/dead decisions.
+`evaluation/results/LATEST` points to `sm_v2_3_compliant.csv`.
+Inference uses only NumPy/pandas and packaged parameters; no external download
+or scikit-learn is needed. Pin dependencies with `requirements-inference.txt`.
+Rollback: `--no-boundary-model` to sm_v2_2; `--no-team-model` to sm_v1_10;
+`--dead-model logistic` to sm_v1_9;
+`--no-learned-dead` to sm_v1_8.
+Method, fitting/validation separation, limitations and reproduction:
+[boundary ensemble and tradeoffs](../docs/algorithms/boundary-ownership-research.md),
+[temporal ownership](../docs/algorithms/temporal-ownership-research.md)
+and [boosted dead-ball model](../docs/algorithms/boosted-dead-ball.md).
 
 **Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
 
@@ -25,12 +36,12 @@ Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](
 
 ## Prerequisites
 
-1. **Python 3.8+** with `numpy` and `pandas` in a venv:
+1. **Python 3.10+** with pinned `numpy` and `pandas` in a venv:
 
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate          # Windows: .venv\Scripts\activate
-   pip install -r requirements.txt
+   pip install -r requirements-inference.txt
    ```
 
 2. **Match data** (not in git). Unpack into `./data` or set `MTAH_DATA_DIR`. See [DATA.md](../DATA.md). Need tactical ATD (Smart Tagging optional; not default).
@@ -85,10 +96,18 @@ bash assess.sh evaluation/results/mine.csv
 
 ---
 
-## Useful flags (defaults = compliant `sm_v1_7`)
+## Useful flags (defaults = compliant `sm_v2_3`)
 
 | Flag | Default | Meaning |
 |------|---------|---------|
+| `--dead-model` | boosted | Choose live/dead base: boosted, logistic (sm_v1_9), or legacy (sm_v1_8) |
+| `--no-team-model` | off | Disable ownership correction and restore sm_v1_10 |
+| `--no-boundary-model` | off | Restore the sm_v2_2 ownership head |
+| `--boundary-team-model-file` | packaged numeric NPZ | Override the dual-head boundary model parameters |
+| `--residual-team-model-file` | packaged numeric NPZ | Override the external-trained ownership correction parameters |
+| `--boosted-model-file` | packaged numeric-tree JSON | External-trained boosted parameters |
+| `--no-learned-dead` | off | Roll back the protected learned dead-ball stage to sm_v1_8 |
+| `--dead-model-file` | packaged JSON | External-trained live/dead parameters |
 | `--control-frames` / `--min-spell-frames` | `25` / `18` | Control hysteresis (~1 s) / short H–A merge |
 | `--out-margin` | `0.02` | Out-of-pitch → `D` |
 | `--missing-near-edge-frames` / `--still-near-edge-frames` | `50` / `25` | Near-edge missing / still → `D` |

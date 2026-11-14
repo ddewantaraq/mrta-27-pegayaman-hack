@@ -1,0 +1,57 @@
+{
+  "schema": "residual_set_v1_reordered158",
+  "parameters_sha256": "73e1d6ab0e1bf57dee53b0313b6f82dad2bc7f0c19466f7ba5342ce1cec8d5a7",
+  "training_games": [
+    "Sportec J03WOH",
+    "Sportec J03WN1",
+    "Sportec J03WOY",
+    "Metrica Sample_Game_1"
+  ],
+  "initialization": "set_ownership_v1 trained on the same four matches",
+  "training": {
+    "seed": 273,
+    "epochs": 12,
+    "batches_per_epoch": 80,
+    "batch_size": 4,
+    "sequence_5hz_samples": 512,
+    "supervised_center_samples": 256,
+    "optimizer": "AdamW",
+    "learning_rate": 0.0002,
+    "weight_decay": 0.0001,
+    "baseline_log_odds_prior": 2.1972245773362196,
+    "natural_sampling_weight": 3,
+    "synthetic_sampling_weight": 1,
+    "dropout_seconds": [
+      0,
+      2,
+      5,
+      10,
+      30
+    ],
+    "dropout_seed": 73
+  },
+  "inference": "raw visible ownership; .01-transition Viterbi missing ownership within baseline H/A; retain D/X; merge18",
+  "feature_dimension": 57,
+  "project_dimension": 158,
+  "export_project_column_order": "x57, baseline sign, endpoint context4, pooled player embeddings96",
+  "research_note": "docs/algorithms/temporal-ownership-research.md",
+  "target_annotations_used": false,
+  "public_challenge_score_used": false,
+  "promotion": "primary spellF1 improves on all six checked matches; strict natural Game3 hidden-accuracy gate fails and is explicitly accepted as a diagnostic tradeoff",
+  "reference_sources": [
+    "https://iris.polito.it/retrieve/d9aa6bfd-b26e-44cd-bf9e-6004e676211a/1-s2.0-S0957417423002816-main.pdf",
+    "https://openaccess.thecvf.com/content_CVPR_2019/papers/Abu_Farha_MS-TCN_Multi-Stage_Temporal_Convolutional_Network_for_Action_Segmentation_CVPR_2019_paper.pdf"
+  ],
+  "data_sources": [
+    "https://github.com/metrica-sports/sample-data",
+    "https://doi.org/10.1038/s41597-025-04505-y"
+  ],
+  "submission_sha256": "27ea6ef8745d3d0641c0d50eb127f48d8fc40cd214aeb9db4066cd3e35e297ba",
+  "inference_code_sha256": {
+    "starter/numpy_set_temporal.py": "7b32c99c90d30feadbf6fc645095d7f7256f15571afd0028218557d27d30568c",
+    "starter/numpy_residual_set.py": "64312923cd8f3d0b1e7b5eaf16b8779f3c3f4a3dcc2c8e91c57a9666842724fa",
+    "starter/residual_ownership_model.py": "9c41809cc167bbb525d266460f17b982f12bce21c751bbef3ba0e9dc67801936",
+    "starter/player_nodes.py": "dea93d66d94c9c355c52744eeb8617adc5231bed4a72a4c27cefb975467fc5e9",
+    "starter/ownership_context.py": "70f30cd44f909f21206f704f8028c304e5c148bdee0d6dede88c7e6a04e85b85"
+  }
+}

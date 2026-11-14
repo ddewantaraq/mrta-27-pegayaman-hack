@@ -1,0 +1,3 @@
+-r requirements-neural.txt
+torch-geometric==2.6.1
+tqdm==4.67.1

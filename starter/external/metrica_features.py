@@ -108,6 +108,7 @@ def extract_metrica_features(
     cluster_radius_m=DEFAULT_CLUSTER_RADIUS_M,
     pz_radius_m=DEFAULT_PZ_RADIUS_M,
     dz_radius_m=DEFAULT_DZ_RADIUS_M,
+    include_motion=False,
 ):
     """Feature dict compatible with label_possession for one Metrica sample game."""
     paths = game_paths(game_name, root)
@@ -222,7 +223,7 @@ def extract_metrica_features(
         arrays["n_near_away"][i] = prox["n_near_away"]
         arrays["majority_team"][i] = prox["majority_team"]
 
-    return {
+    result = {
         "ball_present": arrays["ball_present"],
         "ball_x_norm": arrays["ball_x_norm"],
         "ball_y_norm": arrays["ball_y_norm"],
@@ -247,6 +248,10 @@ def extract_metrica_features(
         "dz_radius_m": float(dz_radius_m),
         "period": periods,
     }
+    if include_motion:
+        from external.motion_features import metrica_motion
+        result['player_motion'] = metrica_motion(game_name, root=root)
+    return result
 
 
 if __name__ == "__main__":

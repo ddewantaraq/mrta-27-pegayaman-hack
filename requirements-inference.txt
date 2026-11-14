@@ -1,0 +1,3 @@
+# Verified environment for regenerating sm_v1_10 from the supplied ATD.
+numpy==2.2.6
+pandas==2.3.3

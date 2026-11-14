@@ -14,7 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 RESULTS_DIR = os.path.join(ROOT, "evaluation", "results")
 LATEST_NAME = "LATEST"
-FALLBACK_LATEST = "sm_v1_7_compliant.csv"
+FALLBACK_LATEST = "sm_v2_3_compliant.csv"
 MAX_MINOR = 10
 
 _RE_MAJOR_MINOR_COMPLIANT = re.compile(
