@@ -205,23 +205,18 @@ code are required for approved inference.
 
 ## Reproduction
 
-Install `requirements-neural.txt` in the research environment (CPU PyTorch is
-optional and is not needed for the current approved NumPy predictor).
+Ship path is NumPy-only (`starter/predict_v1.py`). Optional research re-runs:
+see [research/README.md](../../research/README.md).
 
 ```sh
-python starter/external/fetch_metrica3.py
-python starter/external/temporal_team_experiment.py --train --match J03WMX
-python starter/external/temporal_team_experiment.py --match Sample_Game_2
-python starter/external/set_temporal_experiment.py --train --match J03WMX
-python starter/external/set_temporal_experiment.py --match Sample_Game_2
-python starter/external/residual_set_experiment.py --train --match J03WMX
-python starter/external/export_residual_set.py
-python starter/external/evaluate_approved.py --candidate 2.2 --reference 1.10
-python starter/predict_v1.py --out evaluation/results/reproduced_sm_v2_2.csv
-python -m unittest discover -s starter/external -p 'test_*.py'
+pip install -r research/requirements/requirements-neural.txt
+export PYTHONPATH=starter:starter/external:research/training:research/experiments
+python research/experiments/residual_set_experiment.py --train --match J03WMX
+python research/experiments/export_residual_set.py
+python research/experiments/evaluate_approved.py --candidate 2.2 --reference 1.10
+python starter/predict_v1.py --no-boundary-model --out evaluation/results/sm_v2_2_compliant.csv
+python -m unittest discover -s research/tests -p 'test_*.py'
 ```
 
 Research weights, external frame-level caches and predictions remain ignored.
-Training has no GPU requirement. A winning score cannot be inferred without
-comparable competitor results and the private evaluation; .70 is not a known
-winning threshold.
+Training has no GPU requirement.

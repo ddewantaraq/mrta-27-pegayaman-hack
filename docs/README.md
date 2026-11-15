@@ -4,8 +4,9 @@ Organiser challenge docs stay at the **repo root** (`CHALLENGE.md`, `EVALUATION.
 
 | Path | What |
 |------|------|
-| [ASSESS.md](ASSESS.md) | Two-track keep ritual + `assess` / `predict_v1` commands |
-| [algorithms/](algorithms/) | Algorithm decision notes (e.g. Vidal-Codina → `sm_v1_7`) |
+| [ASSESS.md](ASSESS.md) | Three-track keep ritual (A structure · B Metrica · C Sportec) + `assess` / `predict_v1` |
+| [algorithms/](algorithms/) | Promoted method notes (`sm_v2_3` … earlier levers) |
+| [../research/](../research/) | Archived training/experiments (not required to ship) |
 | [../team/](../team/) | Process: TEAM, TASKS, RESULTS, weeks, tech-doc draft |
 
-Active model line and roles: [../team/TEAM.md](../team/TEAM.md).
+Active model line (**sm_v2_3**) and roles: [../team/TEAM.md](../team/TEAM.md).

@@ -1,7 +1,7 @@
 # Team model — how to run and score
 
 This folder is our team workspace for **More than a Hack 2027** (ball possession).  
-The **runnable model** lives under [`starter/`](../starter/) (ATD features + state machine). This README is for anyone who wants to **regenerate our submission**.
+The **runnable model** lives under [`starter/`](../starter/). This README is for anyone who wants to **regenerate our submission and run assess** with no extra model choices.
 
 Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](../docs/ASSESS.md) · Rules: [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) · Scores: [RESULTS.md](RESULTS.md) · Process: [TEAM.md](TEAM.md)
 
@@ -11,32 +11,27 @@ Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](
 
 | Piece | Path |
 |-------|------|
-| Predict | `starter/predict_v1.py` |
-| One-shot (predict → validate → **assess**) | `predict_v1.sh` / `predict_v1.bat` |
-| Dual-track assess only | `assess.sh` / `assess.bat` → `starter/assess.py` |
+| Predict (ship) | `starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv` |
+| Assess (A + B + C) | `assess.sh` / `assess.bat` → `starter/assess.py` |
 | Features / rules | `starter/features.py`, `state_machine.py` |
-| Public scorer | optional `--public-log` / `PUBLIC_LOG=1` (not a keep gate) |
+| Packaged weights | `starter/models/` (NumPy JSON/NPZ; no training step) |
+| Fetch external assess data | `starter/external/fetch_metrica.py`, `fetch_sportec.py` |
 
-**Code default / approved best:** **`sm_v2_3`**, a boundary-aware ownership ensemble
-with calibrated boosted live/dead decisions.
-`evaluation/results/LATEST` points to `sm_v2_3_compliant.csv`.
-Inference uses only NumPy/pandas and packaged parameters; no external download
-or scikit-learn is needed. Pin dependencies with `requirements-inference.txt`.
-Rollback: `--no-boundary-model` to sm_v2_2; `--no-team-model` to sm_v1_10;
-`--dead-model logistic` to sm_v1_9;
-`--no-learned-dead` to sm_v1_8.
-Method, fitting/validation separation, limitations and reproduction:
-[boundary ensemble and tradeoffs](../docs/algorithms/boundary-ownership-research.md),
-[temporal ownership](../docs/algorithms/temporal-ownership-research.md)
-and [boosted dead-ball model](../docs/algorithms/boosted-dead-ball.md).
+**Approved best (`LATEST`):** **`sm_v2_3`** → `evaluation/results/sm_v2_3_compliant.csv`  
+(boosted live/dead + residual ownership + boundary ensemble).  
 
-**Organiser clarification:** do not train/tune/calibrate parameters on possession GT or the provided video. See [TEAM.md](TEAM.md).
+Inference: `requirements-inference.txt` (NumPy/pandas only).  
+Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10; `--dead-model logistic` → sm_v1_9; `--no-learned-dead` → sm_v1_8.  
+
+Method notes: [boundary](../docs/algorithms/boundary-ownership-research.md) · [temporal ownership](../docs/algorithms/temporal-ownership-research.md) · [boosted dead-ball](../docs/algorithms/boosted-dead-ball.md).
+
+**Organiser clarification:** do not train/tune/calibrate on possession GT or the provided video. See [TEAM.md](TEAM.md).
 
 ---
 
 ## Prerequisites
 
-1. **Python 3.10+** with pinned `numpy` and `pandas` in a venv:
+1. **Python 3.10+** (3.8+ often works for inference) and a venv:
 
    ```bash
    python3 -m venv .venv
@@ -44,55 +39,78 @@ and [boosted dead-ball model](../docs/algorithms/boosted-dead-ball.md).
    pip install -r requirements-inference.txt
    ```
 
-2. **Match data** (not in git). Unpack into `./data` or set `MTAH_DATA_DIR`. See [DATA.md](../DATA.md). Need tactical ATD (Smart Tagging optional; not default).
+2. **Challenge match data** (not in git). Unpack into `./data` or set `MTAH_DATA_DIR`. See [DATA.md](../DATA.md). Need tactical ATD.
 
-3. From the **repository root**.
+3. Run all commands from the **repository root**.
 
 ---
 
-## Quick start (recommended)
-
-**Mac / Linux / Git Bash:**
+## Quick start — regenerate submission (no manual effort)
 
 ```bash
 source .venv/bin/activate
-bash predict_v1.sh
+python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v2_3_compliant.csv
 ```
 
-`predict_v1.sh` uses `python`/`python3` on `PATH` — activate `.venv` first or you get `No module named 'numpy'`.
+Defaults already are **sm_v2_3**. Always use a **fixed `--out`** for the approved file.
 
-**Windows (Command Prompt):**
-
-```bat
-.venv\Scripts\activate
-predict_v1.bat
-```
-
-That runs predict → validate → **Track A + Track B assess**. Optional public log: `PUBLIC_LOG=1 bash predict_v1.sh`. Do **not** keep/drop from the public board.
+Avoid `bash predict_v1.sh` when you only want the ship artifact — it **auto-bumps** the filename after `LATEST` (e.g. `sm_v2_4_…`) for experiments, and does not update `LATEST`.
 
 `sm_v*.csv` files are **gitignored**. Do not commit them.
 
 ---
 
-## Assess only / predict only
+## External data for Tracks B + C
+
+Predict does **not** need these. Full assess does.
+
+### Preferred: fetch scripts
 
 ```bash
-source .venv/bin/activate
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv --skip-metrica
-
-python starter/predict_v1.py --out evaluation/results/mine.csv
-python evaluation/validate_submission.py evaluation/results/mine.csv
-bash assess.sh evaluation/results/mine.csv
+python starter/external/fetch_metrica.py
+python starter/external/fetch_sportec.py --matches J03WMX J03WPY J03WQQ J03WR9
+# optional full dump (~2.6 GB): --matches all
 ```
+
+| Script | Destination |
+|--------|-------------|
+| `fetch_metrica.py` | `data_external/metrica/` |
+| `fetch_sportec.py` | `data_external/sportec/` |
+
+Both trees are **gitignored**.
+
+### If fetch returns 403 / fails
+
+Download yourself, then place files so the layout matches a successful fetch:
+
+| Dataset | Manual fallback |
+|---------|-----------------|
+| **Metrica** sample games 1–2 | From [metrica-sports/sample-data](https://github.com/metrica-sports/sample-data) into `data_external/metrica/` (same layout `fetch_metrica.py` creates: per-game folders / CSVs). |
+| **Sportec** Open DFL | From [figshare 28196177 v1](https://doi.org/10.6084/m9.figshare.28196177.v1) (CC BY 4.0). Extract so you have `data_external/sportec/*.xml` (e.g. unpack a `sportec.rar` into `data_external/` if the archive already contains a `sportec/` folder). |
+
+Then re-run assess. Use `--skip-metrica` or `--skip-sportec` only if that track’s data is still missing.
 
 ---
 
-## What a good run looks like
+## Assess (Tracks A + B + C)
 
-**Validate:** `OK` and `199319 rows`.
+```bash
+source .venv/bin/activate
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv \
+  --ref evaluation/results/sm_v2_2_compliant.csv
+```
 
-**Assess:** see [../docs/ASSESS.md](../docs/ASSESS.md) — Track A structure vs ref + smooth50; Track B Metrica H/A. Full table: [RESULTS.md](RESULTS.md).
+| Track | What |
+|-------|------|
+| **A** | BAR-ATH structure vs ref + `baseline_smooth50` |
+| **B** | Metrica H/A (spellF1 + hidden) |
+| **C** | Sportec full-timeline suite (J03WMX / WPY / WQQ / WR9) |
+
+Optional: `--public-log` (pipeline log only — not a keep gate).  
+Windows: `assess.bat` with the same arguments.
+
+Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · numbers: [RESULTS.md](RESULTS.md).
 
 ---
 
@@ -100,27 +118,18 @@ bash assess.sh evaluation/results/mine.csv
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `--dead-model` | boosted | Choose live/dead base: boosted, logistic (sm_v1_9), or legacy (sm_v1_8) |
-| `--no-team-model` | off | Disable ownership correction and restore sm_v1_10 |
-| `--no-boundary-model` | off | Restore the sm_v2_2 ownership head |
-| `--boundary-team-model-file` | packaged numeric NPZ | Override the dual-head boundary model parameters |
-| `--residual-team-model-file` | packaged numeric NPZ | Override the external-trained ownership correction parameters |
-| `--boosted-model-file` | packaged numeric-tree JSON | External-trained boosted parameters |
-| `--no-learned-dead` | off | Roll back the protected learned dead-ball stage to sm_v1_8 |
-| `--dead-model-file` | packaged JSON | External-trained live/dead parameters |
-| `--control-frames` / `--min-spell-frames` | `25` / `18` | Control hysteresis (~1 s) / short H–A merge |
-| `--out-margin` | `0.02` | Out-of-pitch → `D` |
-| `--missing-near-edge-frames` / `--still-near-edge-frames` | `50` / `25` | Near-edge missing / still → `D` |
-| `--keep-last-live-on-dead` | on | Freeze last team through `D` |
-| `--half-kickoff-reset` / `--no-half-kickoff-reset` | on | HT clear; D before 2nd KO; seed opposite team |
-| `--no-vc-splice` | off (sm_v1_7 on) | Roll back to **sm_v1_6** (no Vidal-Codina on visible frames) |
-| `--backdate-switch` / `--no-backdate-switch` | on | Relabel pending frames once switch confirms |
-| `--gap-bridge` | `mid` | `off\|start\|mid\|end` — place switch inside live missing gap |
-| `--long-gap-dead-frames` | `0` | Optional missing streak → D (off; hurt externally) |
-| `--no-majority-near` | — | Disable contested majority (sm_v1_2 cand) |
-| `--smart-tagging` | off | Archived sm_v1_4 soft SET PIECES → D |
-| `--set-piece-dead-cap-frames` | `50` | First N frames of set-piece tag → D when ball visible |
-| `--clear-last-live-on-dead` | — | sm_v1 rollback behaviour |
+| `--dead-model` | boosted | live/dead base: boosted, logistic (sm_v1_9), or legacy (sm_v1_8) |
+| `--no-team-model` | off | Disable ownership correction → sm_v1_10 |
+| `--no-boundary-model` | off | Restore sm_v2_2 ownership head |
+| `--boundary-team-model-file` | packaged NPZ | Override boundary ensemble weights |
+| `--residual-team-model-file` | packaged NPZ | Override residual ownership weights |
+| `--boosted-model-file` | packaged JSON | Override boosted live/dead weights |
+| `--no-learned-dead` | off | Roll back to geometric sm_v1_8 dead-ball |
+| `--control-frames` / `--min-spell-frames` | `25` / `18` | Control hysteresis / short H–A merge |
+| `--half-kickoff-reset` / `--no-half-kickoff-reset` | on | HT clear; D before 2nd KO; seed opposite |
+| `--no-vc-splice` | off | No Vidal-Codina on visible frames |
+| `--gap-bridge` | `mid` | Place switch inside live missing gap |
+| `--smart-tagging` | off | Archived soft SET PIECES → D |
 
 ---
 
@@ -130,10 +139,10 @@ bash assess.sh evaluation/results/mine.csv
 |------|---------|
 | [TASKS.md](TASKS.md) | Board |
 | [RESULTS.md](RESULTS.md) | Every scored CSV + experiment notes |
-| [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) | Approach + possession rules as implemented |
-| [../docs/ASSESS.md](../docs/ASSESS.md) | Two-track assess command |
-| [../docs/algorithms/](../docs/algorithms/) | Algorithm decision notes |
-| [WEEK3.md](WEEK3.md) / [WEEK4.md](WEEK4.md) | Week plans |
+| [TECH_DOC_DRAFT.md](TECH_DOC_DRAFT.md) | Approach + possession rules |
+| [../docs/ASSESS.md](../docs/ASSESS.md) | Three-track assess |
+| [../research/README.md](../research/README.md) | Archived experiments (not needed for CSV) |
+| [../docs/algorithms/](../docs/algorithms/) | Method decision notes |
 
 ---
 
@@ -143,7 +152,10 @@ bash assess.sh evaluation/results/mine.csv
 |---------|----------------|
 | Predict fails opening ATD | `data/` missing or wrong; check `MTAH_DATA_DIR` |
 | `No module named 'numpy'` | `.venv` not activated |
-| Validate fails row count | Wrong output / truncated write |
-| Scoreboard only shows baselines | No `sm_v*.csv` yet — run `predict_v1` first |
+| Validate fails row count | Wrong / truncated output |
+| Track B fails / no Metrica | Run `fetch_metrica.py` or fill `data_external/metrica/` |
+| Track C fails / no Sportec | Run `fetch_sportec.py` or extract into `data_external/sportec/` |
+| Fetch 403 | Manual download into `data_external/` (table above) |
+| Assess fails on `sm_v2_4` kwargs | Use fixed `--out …/sm_v2_3_compliant.csv`, not auto-bump |
 
-Questions about the official challenge: see [FAQ.md](../FAQ.md). Team notes: edit [RESULTS.md](RESULTS.md) when you add a new CSV.
+Questions about the official challenge: [FAQ.md](../FAQ.md). Team notes: [RESULTS.md](RESULTS.md).

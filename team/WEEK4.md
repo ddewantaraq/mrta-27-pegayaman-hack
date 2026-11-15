@@ -39,7 +39,7 @@ Nov 16–17: form/outage emergencies only. No new models.
 
 Week 4 / project ship is done when **all** are true:
 
-1. Code frozen on the **compliant** line (`sm_v1_4` / approved prior); two regenerations identical (**T42**).
+1. Code frozen on the **compliant** line (`sm_v2_3` / `LATEST`); two regenerations identical (**T42**).
 2. Tech doc has all six sections from SUBMISSION.md and states clarification compliance (**T41**).
 3. Soft submit completed by **15 Nov 23:59 GMT+7** (**T43**): possession CSV, public repo URL, technical document.
 4. Upload file was validated with `validate_submission.py` on the **exact** file sent.

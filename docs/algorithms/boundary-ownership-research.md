@@ -133,19 +133,20 @@ both CPU RNG states. Resume behavior is unit-tested. Thirty-nine tests pass.
 
 ## Reproduction
 
+Ship regenerate (NumPy only):
+
 ```sh
-python starter/external/diagnose_v22.py --match Sample_Game_2
-python starter/external/temporal_dead_experiment.py --train --match J03WMX
-python starter/external/boundary_ownership_experiment.py --train --match J03WMX
-python starter/external/boundary_ownership_experiment.py --match Sample_Game_2
-python starter/external/export_boundary_ownership.py
-python starter/external/evaluate_approved.py --candidate 2.3 --reference 2.2
-python starter/predict_v1.py --out evaluation/results/reproduced_sm_v2_3.csv
-python starter/external/v22_short_ablation.py --match J03WMX
-python starter/external/highres_ownership_experiment.py --train --match J03WMX
-python -m unittest discover -s starter/external -p 'test_*.py'
+python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv
 ```
 
-Use `--resume` on the new training scripts after an interruption. Research
-requires `requirements-neural.txt`; deployment remains NumPy-only. Predictions,
-external frame data, caches and research checkpoints remain ignored.
+Research re-runs (optional; see [research/README.md](../../research/README.md)):
+
+```sh
+pip install -r research/requirements/requirements-neural.txt
+export PYTHONPATH=starter:starter/external:research/training:research/experiments
+python research/experiments/evaluate_approved.py --candidate 2.3 --reference 2.2
+python -m unittest discover -s research/tests -p 'test_*.py'
+```
+
+Deployment remains NumPy-only. Predictions, external frame data, caches and
+research checkpoints remain ignored.

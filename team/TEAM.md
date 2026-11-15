@@ -11,9 +11,9 @@ Produce a validated `frame,label` CSV (199,319 rows: `H` / `A` / `D` / `X`) that
 
 Technical direction: tactical ATD → possession state machine → CSV. Optimize for **possession structure** (what private spellF1 rewards), not per-frame accuracy.
 
-**Active model line:** compliant **`sm_v1_8`** (`evaluation/results/LATEST` → `sm_v1_8_compliant.csv` = sm_v1_7 + short D-sandwich bridge). T27 closed not promoted. `sm_v1_4` archived. Oct `sm_v1_1`…`sm_v2` archive only.
+**Active model line:** compliant **`sm_v2_3`** (`evaluation/results/LATEST` → `sm_v2_3_compliant.csv` = boosted live/dead + residual ownership + boundary ensemble). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. T27 closed not promoted. Oct `sm_v1_1`…`sm_v2` archive only. Research/training scripts: [../research/](../research/).
 
-**Next compliant levers** (rule/physics citations + local non-GT structure; no public-floor keep/drop):
+**Compliant levers completed** (rule/physics / external-data citations; no public-floor keep/drop):
 
 1. ~~Cluster / majority near ball~~ — **done** (`sm_v1_3`).
 2. ~~Soft Smart Tagging redesign~~ — **done / archived** (`sm_v1_4`).
@@ -21,8 +21,9 @@ Technical direction: tactical ATD → possession state machine → CSV. Optimize
 4. ~~Half-time / opposite 2nd kickoff~~ — **done** (`sm_v1_6`).
 5. ~~Visible-ball possession-zone gain~~ — **done** (`sm_v1_7`).
 6. ~~Pass-like / control-confirm~~ — **closed not promoted** (T27).
-7. ~~Short same-team D-sandwich bridge~~ — **done / promoted** (`sm_v1_8`). [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md).
-8. **Homography / broadcast** — deferred (T90).
+7. ~~Short same-team D-sandwich bridge~~ — **done** (`sm_v1_8`).
+8. ~~Learned / boosted live-dead + ownership heads~~ — **done** (`sm_v1_9`…`sm_v2_3`).
+9. **Homography / broadcast** — deferred (T90).
 
 Old A/B with public floors + GT duration bands is **archived** — do not revive.
 
@@ -92,7 +93,8 @@ Keep/drop using **rule/physics citation** — not public spellF1.
 
 1. **Track A — structure:** vs prior compliant CSV + `baseline_smooth50.csv`: short H/A &lt;12f/&lt;25f, n_spells, mean duration, graded X/D.
 2. **Track B — H/A:** Metrica Sample_Game_1/2 + dropouts; external spellF1 (same `possession_metrics` as the challenge) + hidden-frame team accuracy. Team/missing-ball changes must beat the reference on both, both games.
-3. **Public scorer** → optional `--public-log` only. Never the keep driver.
+3. **Track C — Sportec:** excluded-fit matches under the full-timeline dropout suite (`--skip-sportec` if data not fetched).
+4. **Public scorer** → optional `--public-log` only. Never the keep driver.
 
 Algorithm notes: [../docs/algorithms/](../docs/algorithms/). Oct public-GT keep/drop is archived. See [RESULTS.md](RESULTS.md).
 

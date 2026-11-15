@@ -102,8 +102,9 @@ Rebuild the fitted parameters (requires the named external data):
 ```sh
 python starter/external/fetch_sportec.py --matches J03WOH J03WN1
 python starter/external/fetch_metrica.py
-python starter/external/learned_dead_experiment.py --mixed-training --train --match J03WN1
-python starter/external/learned_dead_experiment.py --mixed-training --metrica --match Sample_Game_2 --legacy-dropouts
+export PYTHONPATH=starter:starter/external:research/training:research/experiments
+python research/experiments/learned_dead_experiment.py --mixed-training --train --match J03WN1
+python research/experiments/learned_dead_experiment.py --mixed-training --metrica --match Sample_Game_2 --legacy-dropouts
 ```
 
 Fitting creates `evaluation/reports/dead_model_sportec_J03WOH_mixed.npz`.

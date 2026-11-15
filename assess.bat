@@ -3,7 +3,7 @@ setlocal
 cd /d "%~dp0"
 
 if "%~1"=="" (
-  echo Usage: assess.bat cand.csv [--skip-metrica] [--fetch] [--public-log] [--ref path]
+  echo Usage: assess.bat cand.csv [--ref path] [--skip-metrica] [--skip-sportec] [--fetch] [--fetch-sportec] [--public-log]
   exit /b 1
 )
 

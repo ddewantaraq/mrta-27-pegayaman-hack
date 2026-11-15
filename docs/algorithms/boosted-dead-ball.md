@@ -13,7 +13,7 @@ Training uses only Sportec **J03WOH** and Metrica **Sample_Game_1**, the same
 external fitting matches as sm_v1_9. The feature matrix has 173 columns:
 41 ball/context features plus 132 movement/context features. Permutation-invariant
 movement summaries do not require persistent player identities. Methods and
-rejected candidates are in [the research log](research-round-2026-11-14.md).
+rejected candidates are in [the research log](../../research/docs/research-round-2026-11-14.md).
 
 The classifier uses 150 boosting iterations, learning rate 0.1, 15 leaves,
 minimum 100 samples/leaf, L2=10, 63 bins and seed 73. No random frame-wise
@@ -92,16 +92,17 @@ python starter/predict_v1.py --dead-model logistic --out evaluation/results/sm_v
 python starter/predict_v1.py --no-learned-dead --out evaluation/results/sm_v1_8_rollback.csv
 ```
 
-Training and validation (optional research dependencies and external assets):
+Training and validation (optional; see [research/README.md](../../research/README.md)):
 
 ```sh
-python -m pip install -r requirements-research.txt
+python -m pip install -r research/requirements/requirements-research.txt
+export PYTHONPATH=starter:starter/external:research/training:research/experiments
 python starter/external/fetch_metrica.py
 python starter/external/fetch_sportec.py --matches all
-python starter/external/boosted_motion_experiment.py --train --calibrate-prior --match J03WMX
-python starter/external/export_boosted_model.py --mixed-training --calibrate-prior
-python starter/external/evaluate_approved.py --candidate 1.10 --reference 1.9
-python -m unittest discover -s starter/external -p 'test_*.py'
+python research/experiments/boosted_motion_experiment.py --train --calibrate-prior --match J03WMX
+python research/experiments/export_boosted_model.py --mixed-training --calibrate-prior
+python research/experiments/evaluate_approved.py --candidate 1.10 --reference 1.9
+python -m unittest discover -s research/tests -p 'test_*.py'
 ```
 
 The training exporter produces

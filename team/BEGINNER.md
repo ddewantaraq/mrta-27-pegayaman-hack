@@ -13,7 +13,7 @@ From the repo root (`more-than-a-hack-2027/`):
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-inference.txt
 python -c "import numpy, pandas; print('ok')"
 ```
 
@@ -21,18 +21,20 @@ Mark **T01** done when that works. Note your Python version in [RESULTS.md](RESU
 
 **Clarification:** do not ask E1 to keep a change because the public scoreboard improved. Your job is log + validate, not GT tuning. See [TEAM.md](TEAM.md).
 
+**Current approved CSV:** `evaluation/results/sm_v2_3_compliant.csv` (`LATEST`).
+
 ---
 
 ## Commands you will use often
 
-### Dual-track assess (keep ritual — preferred)
+### Three-track assess (keep ritual — preferred)
 
 ```bash
 source .venv/bin/activate
-bash assess.sh evaluation/results/<file>.csv
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv --skip-sportec
 ```
 
-Track A = structure vs latest + smooth50; Track B = Metrica H/A. See [../docs/ASSESS.md](../docs/ASSESS.md).
+Track A = structure vs ref + smooth50; Track B = Metrica H/A; Track C = Sportec (omit with `--skip-sportec` until data is fetched). See [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ### Optional public board log (not a keep gate)
 

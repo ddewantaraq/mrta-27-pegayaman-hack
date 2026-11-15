@@ -109,7 +109,7 @@ Kept for consistent cross-match and cross-provider gains, with prior correction
 and established short-spell rules after the D overlay. Validation matches have
 informed variant selection; none is a pristine test for future development.
 The hidden challenge score/rank is unknown. Research attempts and rejected
-variants are recorded in the [research log](../docs/algorithms/research-round-2026-11-14.md).
+variants are recorded in the [research log](../research/docs/research-round-2026-11-14.md).
 [Final method and reproduction](../docs/algorithms/boosted-dead-ball.md).
 
 ### 2026-11-14: sm_v1_9 protected learned dead-ball model — promoted
@@ -150,15 +150,15 @@ mean 13.9870 s, <12f 0, <25f 3. Metrica external mean spellF1
 0.511854. Kept experimental for the tiny gain; the assessment code actually
 accepts nondecreasing hidden accuracy. This candidate did not change LATEST.
 No challenge GT used. Four boundary tests pass; candidate submission validates.
-See [experiment and reproduction](../docs/algorithms/live-islands.md).
+See [experiment and reproduction](../research/docs/live-islands.md).
 
 **Metrics only** — no match coordinates, no GT label dumps, no video.
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** … → **`sm_v1_7`** → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** (calibrated boosted live/dead). **Approved best:** `evaluation/results/LATEST` → `sm_v1_10_compliant.csv`. Historical public-GT-era bare files are not this compliant line.
+- **Forward path:** … → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** → **`sm_v2_2`** → **`sm_v2_3`** (boundary ownership ensemble). **Approved best:** `evaluation/results/LATEST` → `sm_v2_3_compliant.csv`. Historical public-GT-era bare files are not this compliant line. Research scripts live under [../research/](../research/).
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process. Auto predict floors on **LATEST**, not max bare archive.
-- **How we assess (not Oct):** two tracks via `assess.sh` — **A** and **B** both **cand vs LATEST vs smooth50** (A = structure CSV; B = Metrica H/A). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
+- **How we assess (not Oct):** three tracks via `assess.sh` — **A** structure (cand vs ref vs smooth50); **B** Metrica H/A; **C** Sportec full-timeline suite (optional `--skip-sportec`). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
 How to fill: `bash assess.sh <cand.csv>` (or predict → assess); add a RESULTS row. See [BEGINNER.md](BEGINNER.md).
 
@@ -196,7 +196,9 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-09 | sm_v1_7_compliant | E1 | 0.6090 | 0.3238 | 25 | 10.4 | Prior LATEST; public numbers log only |
 | 2026-11-12 | sm_v1_8_compliant | E1 | — | — | — | — | Prior LATEST; T32 D-bridge<25f; local spells 359 / mean 13.8; Metrica spellF1 0.491; public log TBD |
 | 2026-11-14 | sm_v1_9_compliant | Codex | — | — | — | — | Prior LATEST; protected learned D; local 331 spells / mean 16.84 / s12 3 / s25 8; external Metrica spellF1 0.4961; Sportec excluded-match spellF1 0.4143 |
-| 2026-11-14 | sm_v1_10_compliant | Codex | — | — | — | — | **LATEST**; calibrated boosted D; local 294 spells / mean 10.07 / s12 0 / s25 2; original Metrica suite 0.5716 (includes training Game 1); five excluded-match whole-timeline suite 0.4811 |
+| 2026-11-14 | sm_v1_10_compliant | Codex | — | — | — | — | Prior LATEST; calibrated boosted D; local 294 spells / mean 10.07 / s12 0 / s25 2; original Metrica suite 0.5716 (includes training Game 1); five excluded-match whole-timeline suite 0.4811 |
+| 2026-11-14 | sm_v2_2_compliant | Codex | — | — | — | — | Prior LATEST; residual ownership; local 319 spells / mean 9.28 / s12 0 / s25 13; Metrica suite spellF1 0.6345 / hidden 0.7878 |
+| 2026-11-14 | sm_v2_3_compliant | Codex | — | — | — | — | **LATEST**; boundary ensemble; local 342 spells / mean 8.65 / s12 0 / s25 8; Metrica vs v2.2 spellF1 0.6443 / hidden 0.8014 (both games); SHA256 `597e3ba8…` |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.
@@ -266,4 +268,7 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-09 | **sm_v1_7**: Vidal-Codina on visible frames; missing frames stay sm_v1_5 / sm_v1_6 | **yes (default)** | Metrica vs sm_v1_5: spellF1 0.370→0.429, hidden 0.510→0.512, both games. Local vs sm_v1_6: spells 416→406, mean 11.83→12.11, short&lt;25f 16→11; ≪ smooth50. ≠ Oct archive `sm_v1_7.csv`. Rollback → `sm_v1_6`. [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md) §3. |
 | 2026-11-12 | T27 pass-travel post-fill (`--pass-travel`) | **no** | Hop fill abandoned. |
 | 2026-11-12 | T27 control-confirm sandwich gate | **no** | Track B lost. Closed. |
-| 2026-11-12 | **sm_v1_8** T32 short D-sandwich bridge (≤25f, same H/A) | **yes (default)** | Tracking flicker ≠ stoppage. Track A + B beat sm_v1_7. Rollback `--no-dead-bridge`. [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md). |
+| 2026-11-12 | **sm_v1_8** T32 short D-sandwich bridge (≤25f, same H/A) | yes (then superseded) | Tracking flicker ≠ stoppage. Track A + B beat sm_v1_7. Still in stack under later models. Rollback `--no-dead-bridge`. [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md). |
+| 2026-11-14 | **sm_v1_10** calibrated boosted live/dead | yes (then sm_v2_2) | External Sportec+Metrica fit. [../docs/algorithms/boosted-dead-ball.md](../docs/algorithms/boosted-dead-ball.md). |
+| 2026-11-14 | **sm_v2_2** residual ownership | yes (then sm_v2_3) | [../docs/algorithms/temporal-ownership-research.md](../docs/algorithms/temporal-ownership-research.md). |
+| 2026-11-14 | **sm_v2_3** boundary ownership ensemble | **yes (default / LATEST)** | Beats v2.2 on Metrica A+B (reassessed 2026-11-15). Rollback `--no-boundary-model`. [../docs/algorithms/boundary-ownership-research.md](../docs/algorithms/boundary-ownership-research.md). Research archive: [../research/](../research/). |

@@ -118,19 +118,21 @@ possession labels were used. Mapping/coordinate artifacts stay gitignored.
 ## Reproduction
 
 Research dependencies are isolated in `.venv`, with versions pinned in
-`requirements-research.txt`. The approved model remains dependency-light.
+`research/requirements/requirements-research.txt`. The approved model remains
+dependency-light (see repo-root `requirements-inference.txt`).
 
 ```sh
-python -m pip install -r requirements-research.txt
+python -m pip install -r research/requirements/requirements-research.txt
+export PYTHONPATH=starter:starter/external:research/training:research/experiments
 python starter/external/fetch_sportec.py --matches all
-python starter/external/motion_dead_experiment.py --train --match J03WMX
-python starter/external/boosted_motion_experiment.py --train --match J03WMX
-python starter/external/boosted_motion_experiment.py --sportec-training --train --match J03WMX
-python starter/external/boosted_motion_experiment.py --sportec-training --match J03WPY
-python starter/external/team_control_experiment.py --spell-balanced --train --match J03WMX
-python starter/external/export_boosted_model.py
-python starter/external/camera_alignment_experiment.py
-python -m unittest discover -s starter/external -p 'test_*.py'
+python research/experiments/motion_dead_experiment.py --train --match J03WMX
+python research/experiments/boosted_motion_experiment.py --train --match J03WMX
+python research/experiments/boosted_motion_experiment.py --sportec-training --train --match J03WMX
+python research/experiments/boosted_motion_experiment.py --sportec-training --match J03WPY
+python research/experiments/team_control_experiment.py --spell-balanced --train --match J03WMX
+python research/experiments/export_boosted_model.py
+python research/experiments/camera_alignment_experiment.py
+python -m unittest discover -s research/tests -p 'test_*.py'
 ```
 
 Numeric boosted trees can be exported to JSON and evaluated with NumPy only.

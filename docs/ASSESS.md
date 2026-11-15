@@ -1,8 +1,8 @@
-# How we assess (two tracks)
+# How we assess (three tracks)
 
-We do **not** keep/drop from the public 5-minute board. Run both tracks when judging a candidate.
+We do **not** keep/drop from the public 5-minute board. Run all tracks when judging a candidate.
 
-**Approved best:** `evaluation/results/LATEST`. Both tracks compare **cand vs LATEST vs smooth50**. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+**Approved best:** `evaluation/results/LATEST`. Tracks compare **cand vs ref** (default LATEST; pass `--ref` to override). Track A also includes smooth50. Promote by editing `LATEST` only when RESULTS keeps a newer model.
 
 **sm_v2_3:** equal-logit ownership ensemble with a learned turnover-boundary
 head. Five excluded-fit-match suite spellF1 .580146 -> .599177 and hidden
@@ -24,7 +24,7 @@ metric, which improves on every checked match, including natural conditions.
 Challenge structure has more <25f spells (2 -> 13), with zero <12f spells.
 See [the full evidence and decision](algorithms/temporal-ownership-research.md).
 Rollback: `--no-team-model`. Broader reproduction:
-`python starter/external/evaluate_approved.py --candidate 2.2 --reference 1.10`.
+`PYTHONPATH=starter:starter/external:research/training:research/experiments python research/experiments/evaluate_approved.py --candidate 2.2 --reference 1.10`.
 
 **sm_v1_10:** calibrated mixed-provider boosted live/dead model. The original
 Metrica suite improves vs sm_v1_9 on both metrics in both games, with Game 1
@@ -32,7 +32,7 @@ remaining a training/development check. Additional whole-timeline 41% dropout
 validation improves both metrics on excluded Metrica Game 2 and four Sportec
 matches (J03WMX/J03WPY/J03WQQ/J03WR9). The two dropout protocols have different
 absolute scores; report them separately. Reproduce the broader comparison with
-`python starter/external/evaluate_approved.py --candidate 1.10 --reference 1.9`.
+`PYTHONPATH=starter:starter/external:research/training:research/experiments python research/experiments/evaluate_approved.py --candidate 1.10 --reference 1.9`.
 See [method, tables and transfer risk](algorithms/boosted-dead-ball.md).
 
 **sm_v1_9:** the protected learned dead-ball model uses external Sportec J03WOH
@@ -65,15 +65,27 @@ Same three columns as Track A: **cand vs LATEST vs smooth50**.
 - **Hidden-frame team accuracy:** on hidden frames where GT is H or A, did we predict that team?
 - Cand = current code defaults; LATEST = kwargs for the version named in `LATEST` (BAR-ATH CSV is not replayed on Metrica)
 
-**Gate (team / missing-ball changes):** beat **LATEST** on external spellF1 **and** hidden accuracy, both games.
+**Gate (team / missing-ball changes):** beat **ref** on external spellF1 **and** hidden accuracy, both games.
+
+## Track C — Sportec H/A (full-timeline suite)
+
+**Question:** does the model transfer to other-provider tracking used in the v2.x line?
+
+- Matches (default, excluded from v2.3 fit): Sportec **J03WMX / J03WPY / J03WQQ / J03WR9**
+- Protocol: natural missing + 41% 2/5/10/30 s block dropouts across the whole timeline (same suite as `evaluate_approved.py`)
+- Metrics: external spellF1 + hidden-frame team accuracy (cand vs ref)
+- Data: `data_external/sportec/` via `python starter/external/fetch_sportec.py --matches …` or `--fetch-sportec`
+
+**Gate:** beat **ref** on spellF1 and hidden across the suite matches. Report Game-1-style in-sample scores separately if ever included.
 
 ## One command
 
 ```bash
 source .venv/bin/activate
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv --skip-metrica
-bash assess.sh evaluation/results/sm_v1_7_compliant.csv --public-log   # optional log only
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv --fetch-sportec
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv --public-log   # optional log only
 ```
 
 After a new prediction:
@@ -88,10 +100,12 @@ Auto predict writes the **next version after LATEST** (prefer bare `sm_v*.csv`; 
 ## Keep checklist
 
 1. Rule / physics / external-data citation  
-2. Track A vs LATEST + smooth50  
+2. Track A vs ref + smooth50  
 3. Track B if the change touches who has the ball / missing frames  
-4. Log model version in [../team/RESULTS.md](../team/RESULTS.md); update `LATEST` only on promote  
+4. Track C (Sportec) for ownership / dead-ball model changes on the v2.x line  
+5. Log model version in [../team/RESULTS.md](../team/RESULTS.md); update `LATEST` only on promote  
 
-`sm_v1_8` (D-bridge): [algorithms/dead-bridge.md](algorithms/dead-bridge.md).  
-`sm_v1_7` (VC): [algorithms/vidal-codina.md](algorithms/vidal-codina.md).  
+`sm_v2_3` (boundary ensemble, **LATEST**): [algorithms/boundary-ownership-research.md](algorithms/boundary-ownership-research.md).  
+`sm_v2_2` / `sm_v1_10` / `sm_v1_8` notes: [algorithms/](algorithms/).  
+Research archive (experiments not needed to regenerate CSV): [../research/](../research/).  
 T27 closed: [algorithms/controlled-possession.md](algorithms/controlled-possession.md).

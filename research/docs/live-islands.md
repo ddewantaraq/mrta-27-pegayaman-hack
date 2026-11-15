@@ -17,8 +17,9 @@ and the existing deterministic 2/5/10/30-second dropout configurations.
 ## Reproduce
 
 ```sh
-python starter/external/short_spell_experiment.py
-python starter/external/short_spell_experiment.py --generate evaluation/results/visible_island25_candidate.csv
+export PYTHONPATH=starter:starter/external:research/training:research/experiments
+python research/experiments/short_spell_experiment.py
+python research/experiments/short_spell_experiment.py --generate evaluation/results/visible_island25_candidate.csv
 python evaluation/validate_submission.py evaluation/results/visible_island25_candidate.csv
 python -m unittest discover -s starter/external -p test_short_spell_experiment.py
 ```

@@ -80,10 +80,15 @@ def load_player_nodes(game,stride=5):
         with np.load(path, allow_pickle=False) as data:
             return data['nodes'].copy()
     if game == 'Sample_Game_3':
+        # Optional research helper (moved under research/experiments/).
+        import sys
+        research_exp = Path(__file__).resolve().parents[2] / 'research' / 'experiments'
+        if str(research_exp) not in sys.path:
+            sys.path.insert(0, str(research_exp))
         from metrica3_geometry import geometry
-        _, _, nodes = geometry(return_nodes=True,node_stride=stride)
+        _, _, nodes = geometry(return_nodes=True, node_stride=stride)
     else:
-        nodes = metrica_nodes(game,stride=stride) if game.startswith('Sample_Game_') else sportec_nodes(game,stride=stride)
+        nodes = metrica_nodes(game, stride=stride) if game.startswith('Sample_Game_') else sportec_nodes(game, stride=stride)
     path.parent.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(path, nodes=nodes)
     return nodes

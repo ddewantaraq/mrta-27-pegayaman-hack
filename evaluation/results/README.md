@@ -1,5 +1,8 @@
 # Put your submissions here
 
+**Approved best pointer:** `LATEST` → currently `sm_v2_3_compliant.csv` (regenerate with
+`python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv`).
+
 Every `*.csv` in this folder is scored by `run_evaluation.py`, and the file name becomes the name
 on the board — so call them something you will recognise.
 

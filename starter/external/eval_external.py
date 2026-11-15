@@ -406,11 +406,15 @@ def evaluate_vc_splice(root):
 
 def kwargs_for_version(major, minor):
     """Metrica kwargs for an approved model version. Extend when promoting."""
-    if (major,minor)==(2,3):
-        kw=kwargs_for_version(1,10)
-        kw['boundary_ensemble_model']=DEFAULT_BOUNDARY_MODEL_PATH
+    # Auto-bump after LATEST (e.g. predict_v1.sh → sm_v2_4) shares sm_v2_3 defaults
+    # until a real promote adds a distinct entry.
+    if (major, minor) == (2, 4):
+        return kwargs_for_version(2, 3)
+    if (major, minor) == (2, 3):
+        kw = kwargs_for_version(1, 10)
+        kw['boundary_ensemble_model'] = DEFAULT_BOUNDARY_MODEL_PATH
         return kw
-    if (major,minor) == (2,2):
+    if (major, minor) == (2, 2):
         kw = kwargs_for_version(1,10)
         kw['residual_ownership_model'] = DEFAULT_RESIDUAL_MODEL_PATH
         return kw
