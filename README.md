@@ -96,47 +96,90 @@ It takes two seconds and it is the single most common way a good entry scores no
 
 ## Our team model (reproduce)
 
-This fork includes a possession **state machine** over tactical ATD.
-**Active / forward path:** compliant **`sm_v1_8`** (sm_v1_7 + short same-team D-sandwich bridge ≤1 s). Approved best: `evaluation/results/LATEST` → `sm_v1_8_compliant.csv`. Rollback → `--no-dead-bridge` (sm_v1_7).
-We do **not** tune parameters on the public possession ground truth (organiser clarification).
+This fork ships a possession pipeline over tactical ATD.
+**Approved best (`LATEST`):** **`sm_v2_3`** — boosted live/dead + residual ownership + boundary ensemble  
+→ `evaluation/results/sm_v2_3_compliant.csv`.  
+Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10.  
+Optional research: `--error-corrector-file` enables the demoted sm_v2_4 stack.  
+We do **not** tune on the public possession ground truth (organiser clarification).
+
+Inference needs only pinned NumPy/pandas and the packaged weights in `starter/models/`.
+
+### 1. Environment + challenge match data
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate   # once; keep activated
-pip install -r requirements.txt
-# unpack the match bundle into ./data  (or set MTAH_DATA_DIR)
-
-# Fixed approved artifact (recommended when regenerating LATEST):
-python starter/predict_v1.py --out evaluation/results/sm_v1_8_compliant.csv
-python evaluation/validate_submission.py evaluation/results/sm_v1_8_compliant.csv
-bash assess.sh evaluation/results/sm_v1_8_compliant.csv   # Track A + B (cand vs LATEST vs smooth50)
-
-# Or one-shot: next version after LATEST, then assess:
-bash predict_v1.sh            # Mac / Linux / Git Bash
-# predict_v1.bat              # Windows CMD
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements-inference.txt
 ```
 
-Auto naming: bump from **LATEST** (not max archive `sm_v2_*`); prefer bare `sm_v*.csv`; add `_compliant` only if that bare file already exists. Does not rewrite `LATEST`.
+Unpack the official match bundle into `./data` (or set `MTAH_DATA_DIR`). See [DATA.md](DATA.md).  
+Enrolment / download: [More than A Hack 2027](https://landing.mobileworldcapital.com/more-than-a-hack-2027).
 
-`predict_v1.sh` / `assess.sh` pick `python`/`python3` from `PATH` — use the project `.venv` or you will hit missing `numpy`. Windows: `predict_v1.bat` / `assess.bat`.
+### 2. Regenerate the submission CSV (no manual model choices)
 
-**Assess ritual:** [docs/ASSESS.md](docs/ASSESS.md) · **How-to:** [team/README.md](team/README.md) ·  
-Rules: [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) · Scores: [team/RESULTS.md](team/RESULTS.md) · Algorithms: [docs/algorithms/](docs/algorithms/)
+```bash
+python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v2_3_compliant.csv
+```
 
-`sm_v*.csv` files are gitignored — regenerate locally. Shipped `baseline_*.csv` still score without data.
+Use a **fixed `--out`** path for the approved artifact. Prefer this over `predict_v1.sh`, which auto-bumps the filename after `LATEST` and is for experiments, not ship.
+
+Windows: same commands with `.venv` activated (`python` from that venv).
+
+### 3. External data for assess Tracks B + C (optional for CSV only)
+
+Predict does **not** need Metrica/Sportec. Assess Track B (Metrica) and Track C (Sportec) do. Both land under gitignored `data_external/`.
+
+**Preferred — run the fetch scripts:**
+
+```bash
+python starter/external/fetch_metrica.py
+python starter/external/fetch_sportec.py --matches J03WMX J03WPY J03WQQ J03WR9
+# or: python starter/external/fetch_sportec.py --matches all
+```
+
+- Metrica → `data_external/metrica/` ([sample-data](https://github.com/metrica-sports/sample-data))  
+- Sportec → `data_external/sportec/` ([figshare v1](https://doi.org/10.6084/m9.figshare.28196177.v1), CC BY 4.0)
+
+**If fetch hits 403 / network errors:** download manually, then place files so the same folders look like a successful fetch:
+
+| Source | Put files here |
+|--------|----------------|
+| Metrica Sample Game 1 & 2 CSVs | `data_external/metrica/Sample_Game_1/`, `…/Sample_Game_2/` (as created by `fetch_metrica.py`) |
+| Sportec Open DFL XMLs (or a `sportec.rar` / zip that contains a top-level `sportec/` directory) | extract into `data_external/` so you get `data_external/sportec/*.xml` |
+
+Then re-run assess. `--skip-metrica` / `--skip-sportec` skip a track if that data is still missing.
+
+### 4. Assess (Tracks A + B + C)
+
+```bash
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv \
+  --ref evaluation/results/sm_v2_2_compliant.csv
+```
+
+- **A** — BAR-ATH structure vs ref + `baseline_smooth50`  
+- **B** — Metrica spellF1 + hidden team accuracy  
+- **C** — Sportec full-timeline suite (excluded-fit matches)  
+
+Detail: [docs/ASSESS.md](docs/ASSESS.md) · team how-to: [team/README.md](team/README.md).
+
+`sm_v*.csv` files are gitignored — regenerate locally. Research/training scripts (not needed for the CSV): [research/](research/).
+
+**Also:** [team/TECH_DOC_DRAFT.md](team/TECH_DOC_DRAFT.md) · [team/RESULTS.md](team/RESULTS.md) · [docs/algorithms/](docs/algorithms/)
 
 ---
 
-## Getting the data
+## Getting the challenge match data
 
-The match assets are released to enrolled participants who have accepted the terms of use.
+The BAR-ATH match assets are released to enrolled participants who have accepted the terms of use.
 
 1. Enrol: **[More than A Hack 2027](https://landing.mobileworldcapital.com/more-than-a-hack-2027)**
 2. Read and sign the terms and conditions in the registration form
 3. You receive a download link.
 4. Unpack it into `./data`, or point `MTAH_DATA_DIR` at wherever you put it.
 
-Full description of every asset and how the frames line up: **[DATA.md](DATA.md)**.
-
+Full description of every asset and how the frames line up: **[DATA.md](DATA.md)**.  
+External Metrica/Sportec for local assess: see **§3** above (`fetch_*.py` or manual into `data_external/`).
 ---
 
 ## Read these, in this order
@@ -163,17 +206,18 @@ evaluation/
   run_evaluation.py         the scorer. This exact file produces the official result
   validate_submission.py    check a file before you send it
   gt/                       the public 5-minute ground truth
-  results/                  the four baselines; put your submissions here
+  results/                  baselines + LATEST pointer; regenerate sm_v*.csv locally
 starter/
+  predict_v1.py             team submission pipeline (defaults = sm_v2_3)
+  models/                   packaged NumPy weights for sm_v2_3 inference
+  external/fetch_metrica.py download Metrica sample games → data_external/metrica/
+  external/fetch_sportec.py download Sportec Open DFL → data_external/sportec/
   baseline.py               the reference baseline, numpy only
-  load_atd.py               read the tracking and line it up with video frames
-  load_smart_tagging.py     read the tactical tagging as video-frame intervals
-  load_homography.py        read the homography; project pitch <-> pixels
-  utils.py                  pitch plotting for the notebooks
-  01_smart_tagging.ipynb    guided tour of the tactical tagging
-  02_tracking_atd.ipynb     guided tour of the tracking data, with plots
-  03_first_submission.ipynb data in, scored submission out — start here
-data/                       unpack the downloaded match assets here. Empty in a fresh clone
+  …                         loaders, notebooks, state machine
+assess.sh                   Tracks A (structure) + B (Metrica) + C (Sportec)
+research/                   archived training/experiments (not needed to regenerate CSV)
+data/                       unpack the challenge match assets here
+data_external/              Metrica + Sportec for assess (gitignored; use fetch_*.py)
 ```
 
 The scorer you run locally is the scorer that decides the competition. If it scores on your

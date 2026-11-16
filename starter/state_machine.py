@@ -1,6 +1,7 @@
 """T21: possession state machine over T20 features.
 
-Default path = compliant sm_v1_8 (sm_v1_7 + short D-sandwich bridge ≤25f).
+Core default = compliant sm_v1_8 (sm_v1_7 + short D-sandwich bridge ≤25f).
+predict_v1.py wraps this core with the calibrated boosted sm_v1_10 dead-ball model.
 T27 control-confirm stays available but off (Track B lost).
 sm_v1_7 = sm_v1_6 + Vidal-Codina gain on visible frames only.
 sm_v1_5 = sm_v1_3 + missing-ball H/A (backdate + gap-bridge mid; Smart Tagging off).
@@ -181,6 +182,8 @@ def label_possession(
     confirm_passes=DEFAULT_CONFIRM_PASSES,
     use_dead_bridge=DEFAULT_USE_DEAD_BRIDGE,
     max_dead_bridge_frames=DEFAULT_MAX_DEAD_BRIDGE_FRAMES,
+    near_edge_margin=None,
+    use_geometric_dead=True,
 ):
     """Return length-n array of 'H'/'A'/'D'/'X'.
 
@@ -199,6 +202,10 @@ def label_possession(
     use_control_confirm: after gap-bridge, revert sandwich H/A spells that lack
         duration or same-team pass evidence (T27; default off).
     use_dead_bridge: after confirm, fill brief D between same H/A (T32).
+    near_edge_margin: optional separate near-edge band for external ablations;
+        None preserves the original out_margin-coupled behaviour.
+    use_geometric_dead: False disables geometric/near-edge D for the learned
+        model's team-only pass; explicit set-piece and kickoff handling remain.
 
     graded: optional bool mask; default = BAR-ATH half video blocks. External
     games pass an all-True (or period) mask so graded_mask(game) is not used.
@@ -298,6 +305,7 @@ def label_possession(
     missing_streak = 0
     still_edge_streak = 0
     use_edge = (missing_near_edge_frames > 0) or (still_near_edge_frames > 0)
+    edge_margin = out_margin if near_edge_margin is None else float(near_edge_margin)
     use_long_gap = int(long_gap_dead_frames) > 0
     live_missing = 0
     reappear_left = 0
@@ -370,7 +378,7 @@ def label_possession(
             missing_streak = 0
             if bspeed is not None and still_near_edge_frames > 0:
                 speed = bspeed[i]
-                near = _ball_near_edge(bx[i], by[i], out_margin)
+                near = _ball_near_edge(bx[i], by[i], edge_margin)
                 slow = (not np.isnan(speed)) and speed <= still_speed_m
                 if near and slow:
                     still_edge_streak += 1
@@ -392,16 +400,16 @@ def label_possession(
         dead = False
         if sp_dead is not None and sp_dead[i]:
             dead = True
-        elif ball_present[i] and _ball_out_of_pitch(bx[i], by[i], out_margin):
+        elif use_geometric_dead and ball_present[i] and _ball_out_of_pitch(bx[i], by[i], out_margin):
             dead = True
-        elif (use_edge and ball_present[i]
+        elif (use_geometric_dead and use_edge and ball_present[i]
               and still_near_edge_frames > 0
               and still_edge_streak >= still_near_edge_frames):
             dead = True
-        elif (use_edge and not ball_present[i]
+        elif (use_geometric_dead and use_edge and not ball_present[i]
               and missing_near_edge_frames > 0
               and missing_streak >= missing_near_edge_frames
-              and _ball_near_edge(last_ball_x, last_ball_y, out_margin)):
+              and _ball_near_edge(last_ball_x, last_ball_y, edge_margin)):
             dead = True
         elif (use_long_gap and not ball_present[i]
               and missing_streak >= int(long_gap_dead_frames)):

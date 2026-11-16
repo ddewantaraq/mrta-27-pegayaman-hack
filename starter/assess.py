@@ -1,16 +1,22 @@
-"""Dual-track assessment: local structure (A) + Metrica H/A (B).
+"""Three-track assessment: local structure (A) + Metrica (B) + Sportec (C).
 
-Both tracks: cand vs LATEST (approved best) vs smooth50.
+All external tracks: cand vs reference vs smooth50 where applicable.
 
 Track A — BAR-ATH CSV structure (n_spells, mean duration, short <12f / <25f,
-  D, X). No BAR-ATH GT.
+  D, X). No BAR-ATH GT. Columns: cand vs --ref (default LATEST) vs smooth50.
 
 Track B — same challenge spellF1 code on Metrica event labels + dropouts,
-  plus hidden-frame team accuracy. Re-runs kwargs for cand (code defaults)
-  and LATEST (version registry); does not score the BAR-ATH CSV on Metrica.
+  plus hidden-frame team accuracy. Re-runs kwargs for cand and reference
+  versions (from CSV names when parseable); does not score the BAR-ATH CSV
+  on Metrica.
 
-    .venv/bin/python starter/assess.py --cand evaluation/results/sm_v1_7_compliant.csv
-    bash assess.sh evaluation/results/sm_v1_7_compliant.csv
+Track C — Sportec Open DFL excluded-fit matches (default J03WMX/WPY/WQQ/WR9)
+  under the full-timeline natural + 2/5/10/30s block-dropout suite used for
+  sm_v1_10 / sm_v2_x promotion. Same spellF1 + hidden metrics as Track B.
+
+    .venv/bin/python starter/assess.py --cand evaluation/results/sm_v2_3_compliant.csv \\
+        --ref evaluation/results/sm_v2_2_compliant.csv
+    bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv
 """
 
 from __future__ import print_function
@@ -41,6 +47,9 @@ from vc_possession import live_structure  # noqa: E402
 DEFAULT_SMOOTH = os.path.join(ROOT, "evaluation", "results", "baseline_smooth50.csv")
 DEFAULT_METRICA_OUT = os.path.join(
     ROOT, "evaluation", "reports", "assess_metrica.csv")
+DEFAULT_SPORTEC_OUT = os.path.join(
+    ROOT, "evaluation", "reports", "assess_sportec.csv")
+DEFAULT_SPORTEC_MATCHES = ("J03WMX", "J03WPY", "J03WQQ", "J03WR9")
 
 
 def _structure_row(path):
@@ -59,7 +68,7 @@ def _structure_row(path):
 
 def run_track_a(cand_path, ref_path, smooth_path):
     print("=== Track A: local structure (no BAR-ATH GT) ===")
-    print("cand vs LATEST vs smooth50")
+    print("cand vs ref vs smooth50")
     rows = []
     for path in (cand_path, ref_path, smooth_path):
         if not os.path.isfile(path):
@@ -77,7 +86,7 @@ def run_track_a(cand_path, ref_path, smooth_path):
             r["D"],
             r["X"],
         ))
-    print("Gate: prefer fewer s12/s25 and longer mean vs LATEST; clearly better than smooth50.")
+    print("Gate: prefer fewer s12/s25 and longer mean vs ref; clearly better than smooth50.")
     return rows
 
 
@@ -88,46 +97,44 @@ def _cand_display_name(cand_path):
     return os.path.basename(cand_path)
 
 
-def run_track_b(metrica_root, out_csv, cand_path, fetch=False):
-    from fetch_metrica import fetch_all, DEFAULT_OUT  # noqa: E402
+def _kwargs_for_path(path, fallback="current"):
+    """Labeller kwargs from a submission filename, else current or LATEST."""
+    from eval_external import current_cand_kwargs, kwargs_for_version  # noqa: E402
+
+    parsed = parse_sm_version(path) if path else None
+    if parsed is not None:
+        try:
+            return kwargs_for_version(*parsed), format_version_label(*parsed)
+        except KeyError as exc:
+            # Auto-bumped sm_v* after LATEST: predict just wrote current defaults.
+            if fallback == "latest":
+                raise
+            print("WARN  {}: using current predict defaults for cand".format(exc),
+                  flush=True)
+            return current_cand_kwargs(), format_version_label(*parsed)
+    if fallback == "latest":
+        maj, minor = latest_version()
+        return kwargs_for_version(maj, minor), format_version_label(maj, minor)
+    return current_cand_kwargs(), "cand-defaults"
+
+
+def _print_external_summary(rows, cand_label, ref_label, include_smooth=True):
     from eval_external import (  # noqa: E402
         aggregate_by_candidate,
-        current_cand_kwargs,
-        evaluate_cand_vs_latest,
-        kwargs_for_version,
         per_game_means,
         pick_cand_vs_latest,
-        write_csv,
     )
 
-    root = metrica_root or DEFAULT_OUT
-    maj, minor = latest_version()
-    latest_label = format_version_label(maj, minor)
-    cand_label = _cand_display_name(cand_path)
-    display = {"cand": cand_label, "latest": latest_label, "smooth50": "smooth50"}
-
-    print("=== Track B: Metrica H/A (external spellF1 + hidden team acc) ===")
-    print("spellF1 = same possession_metrics as the challenge; GT = Metrica events.")
-    print("Model versions: {} vs {} vs smooth50.".format(cand_label, latest_label))
-    if fetch:
-        fetch_all(root=root)
-    latest_kw = kwargs_for_version(maj, minor)
-    cand_kw = current_cand_kwargs()
-    rows = evaluate_cand_vs_latest(root, cand_kw, latest_kw)
-    out_dir = os.path.dirname(out_csv)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
-    write_csv(out_csv, rows)
-    print("wrote {}".format(out_csv))
+    display = {"cand": cand_label, "latest": ref_label, "smooth50": "smooth50"}
     agg = aggregate_by_candidate(rows)
     per_g = per_game_means(rows)
     print("\n--- aggregate (mean over games x dropouts) ---")
-    order = ("cand", "latest", "smooth50")
     for name in sorted(agg, key=lambda n: -agg[n]["mean_spell_f1"]):
         s = agg[name]
         print("  {:16s}  spellF1={:.4f}  hidden={:.4f}  n={}".format(
             display.get(name, name), s["mean_spell_f1"], s["mean_hidden_team_acc"], s["n"]))
     print("\n--- per game ---")
+    order = ("cand", "latest", "smooth50") if include_smooth else ("cand", "latest")
     for name in order:
         if name not in per_g:
             continue
@@ -136,11 +143,107 @@ def run_track_b(metrica_root, out_csv, cand_path, fetch=False):
             print("  {:16s}  {:16s}  spellF1={:.4f}  hidden={:.4f}".format(
                 display.get(name, name), game, s["mean_spell_f1"], s["mean_hidden_team_acc"]))
     winner, reason = pick_cand_vs_latest(rows)
-    print("\nVS LATEST ({}): {} ({})".format(
-        latest_label,
+    print("\nVS REF ({}): {} ({})".format(
+        ref_label,
         display.get(winner, "none") if winner else "none",
         reason))
-    print("Gate: beat LATEST on spellF1 AND hidden, both games.")
+    return rows
+
+
+def run_track_b(metrica_root, out_csv, cand_path, ref_path, fetch=False):
+    from fetch_metrica import fetch_all, DEFAULT_OUT  # noqa: E402
+    from eval_external import evaluate_cand_vs_latest, write_csv  # noqa: E402
+
+    root = metrica_root or DEFAULT_OUT
+    cand_kw, cand_label = _kwargs_for_path(cand_path, fallback="current")
+    ref_kw, ref_label = _kwargs_for_path(ref_path, fallback="latest")
+
+    print("=== Track B: Metrica H/A (external spellF1 + hidden team acc) ===")
+    print("spellF1 = same possession_metrics as the challenge; GT = Metrica events.")
+    print("Model versions: {} vs {} vs smooth50.".format(cand_label, ref_label))
+    if fetch:
+        fetch_all(root=root)
+    rows = evaluate_cand_vs_latest(root, cand_kw, ref_kw)
+    out_dir = os.path.dirname(out_csv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    write_csv(out_csv, rows)
+    print("wrote {}".format(out_csv))
+    _print_external_summary(rows, cand_label, ref_label, include_smooth=True)
+    print("Gate: beat ref on spellF1 AND hidden, both games.")
+    return rows
+
+
+def run_track_c(out_csv, cand_path, ref_path, matches, fetch=False):
+    """Full-timeline Sportec suite: cand vs ref (no smooth50 column)."""
+    import numpy as np
+    from eval_external import run_labeller, score_one, write_csv  # noqa: E402
+    from dropout import apply_dropout  # noqa: E402
+    from external_dataset import dataset  # noqa: E402
+    from sportec_experiment import block_dropout  # noqa: E402
+
+    cand_kw, cand_label = _kwargs_for_path(cand_path, fallback="current")
+    ref_kw, ref_label = _kwargs_for_path(ref_path, fallback="latest")
+    match_list = list(matches)
+
+    print("=== Track C: Sportec H/A (full-timeline suite) ===")
+    print("Matches (excluded from v2.3 fit): {}".format(", ".join(match_list)))
+    print("Dropouts: natural + 2/5/10/30s blocks (seed 41, p=0.41).")
+    print("Model versions: {} vs {}.".format(cand_label, ref_label))
+
+    if fetch:
+        import subprocess
+        cmd = [
+            sys.executable,
+            os.path.join(HERE, "external", "fetch_sportec.py"),
+            "--matches",
+        ] + match_list
+        print("fetch:", " ".join(cmd), flush=True)
+        subprocess.check_call(cmd, cwd=ROOT)
+
+    sportec_root = os.path.join(ROOT, "data_external", "sportec")
+    missing = [
+        m for m in match_list
+        if not any(
+            name.endswith(".xml") and m in name
+            for name in (os.listdir(sportec_root) if os.path.isdir(sportec_root) else [])
+        )
+    ]
+    if missing:
+        raise FileNotFoundError(
+            "Sportec match files missing for {}: {}. "
+            "Run: python starter/external/fetch_sportec.py --matches {} "
+            "(or pass --fetch-sportec). Use --skip-sportec to omit Track C.".format(
+                sportec_root, ", ".join(missing), " ".join(missing)))
+
+    rows = []
+    for game in match_list:
+        feats, gt, graded = dataset(game)
+        for sec in (0, 2, 5, 10, 30):
+            hide = (
+                np.zeros(feats["n_frames"], dtype=bool)
+                if sec == 0
+                else block_dropout(feats["n_frames"], sec)
+            )
+            dropped = apply_dropout(feats, hide)
+            score_hide = hide | (~np.asarray(feats["ball_present"], dtype=bool))
+            for name, kw in (("cand", cand_kw), ("latest", ref_kw)):
+                pred = run_labeller(dropped, graded, kw)
+                rows.append(dict(
+                    game=game,
+                    dropout=("natural" if sec == 0 else "{}s".format(sec)),
+                    candidate=name,
+                    **score_one(gt, pred, score_hide),
+                ))
+            print("  {} {}s".format(game, sec), flush=True)
+
+    out_dir = os.path.dirname(out_csv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    write_csv(out_csv, rows)
+    print("wrote {}".format(out_csv))
+    _print_external_summary(rows, cand_label, ref_label, include_smooth=False)
+    print("Gate: beat ref on spellF1 AND hidden across the Sportec suite matches.")
     return rows
 
 
@@ -151,22 +254,34 @@ def main(argv=None):
         help="candidate BAR-ATH submission CSV (Track A)")
     parser.add_argument(
         "--ref", default=None,
-        help="LATEST / structure reference CSV (default from evaluation/results/LATEST)")
+        help="structure + kwargs reference CSV (default from evaluation/results/LATEST)")
     parser.add_argument(
         "--smooth", default=DEFAULT_SMOOTH,
         help="smooth50 baseline CSV")
     parser.add_argument(
         "--skip-metrica", action="store_true",
-        help="run Track A only")
+        help="skip Track B")
+    parser.add_argument(
+        "--skip-sportec", action="store_true",
+        help="skip Track C")
     parser.add_argument(
         "--fetch", action="store_true",
         help="download Metrica sample games before Track B")
+    parser.add_argument(
+        "--fetch-sportec", action="store_true",
+        help="download Track C Sportec matches before scoring")
     parser.add_argument(
         "--metrica-root", default=None,
         help="Metrica data root (default starter/external cache)")
     parser.add_argument(
         "--metrica-out", default=DEFAULT_METRICA_OUT,
         help="CSV path for Track B row dump")
+    parser.add_argument(
+        "--sportec-out", default=DEFAULT_SPORTEC_OUT,
+        help="CSV path for Track C row dump")
+    parser.add_argument(
+        "--sportec-matches", nargs="+", default=list(DEFAULT_SPORTEC_MATCHES),
+        help="Sportec match IDs for Track C")
     parser.add_argument(
         "--public-log", action="store_true",
         help="optional: also run public 5-min scorer (log only, not a keep gate)")
@@ -178,33 +293,48 @@ def main(argv=None):
         return 1
     ref_path = os.path.abspath(args.ref) if args.ref else read_latest()
 
-    track_b_err = []
+    track_errs = []
 
     def _b():
         try:
             run_track_b(
-                args.metrica_root, args.metrica_out, cand, fetch=args.fetch)
+                args.metrica_root, args.metrica_out, cand, ref_path,
+                fetch=args.fetch)
         except Exception as exc:
-            track_b_err.append(exc)
+            track_errs.append(("B", exc))
 
-    b_thread = None
+    def _c():
+        try:
+            run_track_c(
+                args.sportec_out, cand, ref_path, args.sportec_matches,
+                fetch=args.fetch_sportec)
+        except Exception as exc:
+            track_errs.append(("C", exc))
+
+    threads = []
     if not args.skip_metrica:
-        b_thread = threading.Thread(target=_b)
-        b_thread.start()
+        t = threading.Thread(target=_b)
+        t.start()
+        threads.append(t)
+    if not args.skip_sportec:
+        t = threading.Thread(target=_c)
+        t.start()
+        threads.append(t)
 
     try:
         run_track_a(cand, ref_path, os.path.abspath(args.smooth))
     except Exception as exc:
         print("FAIL  Track A: {}".format(exc), file=sys.stderr)
-        if b_thread is not None:
-            b_thread.join()
+        for t in threads:
+            t.join()
         return 1
 
-    if b_thread is not None:
-        b_thread.join()
-        if track_b_err:
-            print("FAIL  Track B: {}".format(track_b_err[0]), file=sys.stderr)
-            return 1
+    for t in threads:
+        t.join()
+    if track_errs:
+        for name, exc in track_errs:
+            print("FAIL  Track {}: {}".format(name, exc), file=sys.stderr)
+        return 1
 
     if args.public_log:
         print("\n=== optional public log (not a keep gate) ===")
@@ -224,7 +354,7 @@ def main(argv=None):
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
-    print("\nSee docs/ASSESS.md for the two-track keep ritual.")
+    print("\nSee docs/ASSESS.md for the three-track keep ritual.")
     print("OK  assess {}".format(cand))
     return 0
 

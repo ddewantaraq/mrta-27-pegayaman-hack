@@ -44,7 +44,7 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 | T28 | Missing-ball H/A via Metrica external validation | E1 | 4 | done | Nov 7 | External harness; backdate+gap-mid wins vs sm_v1_3; `sm_v1_5_compliant`; local structure ≥ sm_v1_3 ≪ smooth50; ST off | T25 |
 | T29 | Half-time reset + opposite 2nd-half kickoff | E1 | 4 | done | Nov 8 | Clear last_live at HT; D before published 2nd KO; seed opposite; `sm_v1_6_compliant`; local vs sm_v1_5 ≪ smooth50 | T28 |
 | T27 | Pass-like travel / control-confirm | E1 | 4 | done | Nov 12 | Closed not promoted (Track B lost); `--control-confirm` archive only | T29 |
-| T32 | Short same-team D-sandwich bridge | E1 | 4 | done | Nov 12 | `_bridge_short_dead` max 25f; A+B beat sm_v1_7; **promoted sm_v1_8 / LATEST** | T27 |
+| T32 | Short same-team D-sandwich bridge | E1 | 4 | done | Nov 12 | `_bridge_short_dead` max 25f; A+B beat sm_v1_7; promoted sm_v1_8 (later superseded by sm_v2_3) | T27 |
 
 ---
 

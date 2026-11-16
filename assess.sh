@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Dual-track assess: Track A + Track B (both cand vs LATEST vs smooth50).
-# LATEST = evaluation/results/LATEST (approved best).
+# Three-track assess: Track A (structure) + B (Metrica) + C (Sportec).
+# Default ref = evaluation/results/LATEST (approved best).
 # Usage:
-#   bash assess.sh evaluation/results/sm_v1_7_compliant.csv
-#   bash assess.sh evaluation/results/sm_v1_7_compliant.csv --skip-metrica
-#   bash assess.sh evaluation/results/sm_v1_7_compliant.csv --public-log
+#   bash assess.sh evaluation/results/sm_v2_3_compliant.csv
+#   bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv
+#   bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
+#   bash assess.sh evaluation/results/sm_v2_3_compliant.csv --fetch-sportec
+#   bash assess.sh evaluation/results/sm_v2_3_compliant.csv --public-log
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -18,7 +20,7 @@ else
 fi
 
 if [[ $# -lt 1 ]]; then
-  echo "Usage: bash assess.sh <cand.csv> [--skip-metrica] [--fetch] [--public-log] [--ref path]"
+  echo "Usage: bash assess.sh <cand.csv> [--ref path] [--skip-metrica] [--skip-sportec] [--fetch] [--fetch-sportec] [--public-log]"
   exit 1
 fi
 

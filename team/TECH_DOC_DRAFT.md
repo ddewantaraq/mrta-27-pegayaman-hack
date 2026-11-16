@@ -17,13 +17,73 @@ _Owner: B · Reviewer: E1_ — **T13r signed off 2026-10-24**
 - **macroF1** (tie-break / per-frame): Mean of the per-class F1 scores for `H`, `A`, and `D` on every graded frame. Measures “right letter, right frame.” Useful diagnostic; reported beside spellF1 and breaks ties only.
 - **Organiser clarification (Nov 2026):** parameters must **not** be trained, fitted, or calibrated on the possession ground truth or the provided video. The public 5-minute GT is for **pipeline verification** only (file shape, scorer runs). We set knobs from challenge rules / ATD physics (or licensed external data), not from public spellF1 keep/drop.
 - Why public spellF1 alone was always a weak private proxy: smooth125 can lead the public window while losing on the full match (published floor smooth50 spellF1 **0.2433**). That is a second reason not to chase the public board — the first is the clarification itself.
-- **How we assess (vs Oct public-GT keep/drop):** dual tracks via `assess.sh` — local structure vs prior + `baseline_smooth50.csv`; Metrica H/A (external spellF1 + hidden). Public board = optional log only. Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
+- **How we assess (vs Oct public-GT keep/drop):** three tracks via `assess.sh` — local structure vs prior + `baseline_smooth50.csv`; Metrica H/A; Sportec full-timeline suite (Track C; `--skip-sportec` if data missing). Public board = optional log only. Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
 Illustration (pipeline sanity, T10): raw invents far more possessions than a coach would count → structure matters more than frame accuracy.
 
 ---
 
 ## 1. Approach and why
+
+**Current method — sm_v2_3 (2026-11-14):** a joint ownership/boundary network
+is equally ensembled with v2.2 logits. Geometry-only inputs and external-only
+fitting remain unchanged. Raw ensemble signs apply when the ball is observed;
+learned boundary-dependent transition costs decode missing-ball ownership.
+Boundary targets use external H/A switches, never challenge annotations.
+The five excluded-fit-match suite improves spellF1 .580146 -> .599177 and
+hidden accuracy .774845 -> .791608. Original Metrica protocol improves
+.634473 -> .644263 spellF1, both metrics in both games (Game 1 is training).
+Additional Game 3 natural spellF1 .679070 -> .702290 is external validation,
+not the challenge score. Small natural regressions on other matches remain.
+NumPy-only parameters reproduce exactly. See
+[boundary ownership research](../docs/algorithms/boundary-ownership-research.md).
+
+**Tried / demoted — sm_v2_4 (2026-11-16):** second-stage live-team error
+corrector on control geometry + v2.3 ensemble logits. Crossfit natural and
+Metrica/Sportec B/C improved vs v2.3, but Track A structure worsened (s25 8→10,
+shorter mean spells). Demoted; opt-in `--error-corrector-file`. See
+[push-090-natural](../docs/algorithms/push-090-natural.md).
+
+**Previous method — sm_v2_2 (2026-11-14):** a baseline-aware player-set temporal
+network corrects the v1.10 team estimates, retaining its D/X decisions. Inputs
+are geometry-only anonymous player sets, observed-ball context and the
+automatic baseline prediction. It is fitted only on Sportec WOH/WN1/WOY and
+Metrica Game 1. Raw decisions apply when the ball is visible; Viterbi decoding
+applies when it is missing. Numeric export keeps inference NumPy-only.
+The five excluded-fit-match dropout-suite spellF1 improves .481070 -> .580146;
+the original Metrica protocol improves .571573 -> .634473 (Game 1 is training).
+Additional Metrica 3 validation also improves spellF1, with a documented
+natural hidden-accuracy regression. Promotion prioritizes the primary ranking
+metric; no winning private score is claimed. Full split provenance, failed
+candidates, method and tradeoffs:
+[temporal ownership research](../docs/algorithms/temporal-ownership-research.md).
+
+**Previous method — sm_v1_10 (2026-11-14):** calibrated boosted numeric trees
+replace the linear live/dead head. Inputs combine ball geometry/context with
+permutation-invariant player movement available while the ball is missing.
+Training uses Sportec J03WOH and Metrica Game 1 only; full source separation,
+hyperparameters, numeric export validation and the five excluded-match results
+are in [the final method note](../docs/algorithms/boosted-dead-ball.md).
+Published kickoff handling remains; short-spell postprocessing follows the
+learned D overlay. Packaged inference needs only pinned NumPy/pandas.
+Metrica Game 2 and four additional Sportec matches improve both spellF1 and
+hidden-team accuracy under the whole-timeline dropout suite. Challenge GT and
+video were not used. The increased target D count remains a transfer risk.
+
+The following sm_v1_9 description documents the prior approved baseline.
+
+**2026-11-14 update — sm_v1_9:** a protected live/dead classifier trained only
+on external Sportec J03WOH and Metrica Sample_Game_1 now overlays the existing
+team-control pipeline. Logistic emissions use geometry and temporal context;
+Viterbi decoding limits state flicker. Existing H/A answers on missing-ball
+frames are preserved. Parameters are packaged as a small JSON file; inference
+does not load any annotations. Sportec J03WN1 and Metrica Sample_Game_2 were
+excluded from fitting and both show improved spellF1 and hidden accuracy.
+Complete training recipe, attribution, validation tables and limitations:
+[protected learned dead-ball model](../docs/algorithms/learned-dead-ball.md).
+
+Metrica Game 1 is now a training source; its scores are not held-out results.
+Sportec Open DFL is licensed CC BY 4.0 (Bassek et al., 2025).
 
 _Owner: B (structure) · E1 (method)_
 
@@ -46,13 +106,14 @@ _Owner: E1 · B lists “dropped”_
 | Tactical homography | no | Lever deferred; optional debug only |
 | Tactical video | no | May inspect to understand possession; not an algorithm input; no output-vs-video check |
 | Broadcast (all) | no | Deferred / T90; separate timeline |
-| Metrica sample-data (other games) | yes (validation) | External label source for missing-ball H/A rules; not an algorithm input on BAR-ATH |
+| Metrica sample-data (other games) | yes | Game 1 in fit sets for v1.9+; Game 2 holdout / Track B; not an inference input on BAR-ATH |
+| Sportec Open DFL (other games, CC BY 4.0) | yes | Fit: WOH/WN1/WOY (+ WOH for boosted D); Track C / excluded checks: WMX/WPY/WQQ/WR9 |
 
-**Compliant levers (order):** (1) cluster/majority ~~done~~ → (2) Soft ST ~~done/archived (`sm_v1_4`)~~ → (3) missing-ball H/A ~~done (`sm_v1_5`)~~ → (4) half-kickoff reset ~~done (`sm_v1_6`)~~ → (5) pass-like same-team travel → (6) homography/broadcast deferred. Keep gates = rule citation + local structure vs prior + smooth50 (+ external Metrica for missing-ball). Old public-floors + GT duration-band A/B is archived.
+**Compliant levers (order):** cluster → soft ST (archived) → missing-ball H/A → half-kickoff → VC splice → D-bridge → learned/boosted D → residual ownership → **boundary ensemble (`sm_v2_3`)** · live-team error corrector tried/demoted (`sm_v2_4`) · homography/broadcast deferred. Keep gates = rule citation + Tracks A/B(/C). Old public-floor keep/drop archived.
 
-Oct 2026 public-GT-tuned variants (archive `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative. Compliant `sm_v1_*_compliant` files are distinct from those Oct rows.
+Oct 2026 public-GT-tuned variants (archive bare `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative.
 
-**External data acknowledgement:** Sample tracking and event data from [Metrica Sports sample-data](https://github.com/metrica-sports/sample-data). Used only for compliant validation of missing-ball rules on *other* games.
+**External data acknowledgement:** [Metrica Sports sample-data](https://github.com/metrica-sports/sample-data); Sportec Open DFL CC BY 4.0 (Bassek et al. 2025). Other matches only — not the challenge match. Packaged NumPy weights in `starter/models/` are fit on those external games.
 
 ---
 
@@ -111,13 +172,13 @@ Features (tactical ATD): ball present, position, nearest team and distance (m), 
 - Half-1 cold-start X unchanged (live after kickoff, nobody close yet).
 - Rollback: `--no-half-kickoff-reset`.
 
-**Compliant `sm_v1_7` (default; builds on sm_v1_6):**
+**Compliant `sm_v1_7` (builds on sm_v1_6; later superseded by sm_v1_8…sm_v2_3):**
 - Two passes. Where the ball coordinate is present, the candidate is a Vidal-Codina gain (possession zone 1.0 m, duel zone 1.0 m; direction change > 10° or speed change > 5 m/s). A duel or a straight fly-by does not switch the team.
 - Where the ball is missing, the label is the `sm_v1_6` label, including gap-bridge mid.
 - One short-spell merge on the joined row.
 - Chosen on Metrica against `sm_v1_5`: spellF1 0.370→0.429 and hidden-frame team accuracy 0.510→0.512, both games. Plain VC on all frames (including missing) lost hidden-frame accuracy and is not the default. Rollback → `sm_v1_6`. Detail: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
 
-One command: `predict_v1.sh` / `.bat` (predict → validate → **assess**). Re-assess only: `assess.sh <cand.csv>`. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md).
+One command: `predict_v1.sh` / `.bat` (predict → validate → **assess**). Fixed artifact: `python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv`. Re-assess: `bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec`. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ### External validation (missing-ball H/A)
 
@@ -162,20 +223,22 @@ _Owner: B + E1_
 _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate a submission that matches our
-**compliant defaults** (`sm_v1_7`). Step-by-step: **[README.md](README.md)** · assess: [../docs/ASSESS.md](../docs/ASSESS.md).
+**compliant defaults** (`sm_v2_3`). Step-by-step: **[../README.md](../README.md)** · assess: [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-bash predict_v1.sh
+pip install -r requirements-inference.txt
+python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v2_3_compliant.csv
+bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
 ```
 
-Windows: activate `.venv`, then `predict_v1.bat`.
+Windows: activate `.venv`, then `predict_v1.bat` / `assess.bat`.
 
-- Output: next `evaluation/results/sm_v*.csv` — 199,319 rows, `frame,label`. Gitignored.
-- Defaults (`sm_v1_7`): sm_v1_6 knobs plus VC on visible / sm_v1_6 rules on missing. Rollback → `sm_v1_6` / `--no-half-kickoff-reset` / `--no-backdate-switch --gap-bridge off`.
-- Dual-track assess: `bash assess.sh evaluation/results/sm_v1_7_compliant.csv` (or after predict).
-- Match `data/` and `data_external/` are **not** in the public repo. See `DATA.md`.
+- Output: `evaluation/results/sm_v2_3_compliant.csv` — 199,319 rows, `frame,label`. Gitignored (regenerate locally).
+- Defaults (`sm_v2_3`): boosted live/dead + residual ownership + boundary ensemble (NumPy weights in `starter/models/`). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. Optional demoted stack: `--error-corrector-file`.
+- Three-track assess: A structure · B Metrica · C Sportec (`--skip-sportec` if `data_external/sportec/` missing).
+- Match `data/` and `data_external/` are **not** in the public repo. Research/training scripts are under [../research/](../research/) and are not required to regenerate the CSV. See `DATA.md`.
 
 ---
 
@@ -196,3 +259,6 @@ Windows: activate `.venv`, then `predict_v1.bat`.
 | 2026-11-07 | E1 | sm_v1_5: backdate-switch + gap-bridge mid (Metrica external); §2/§3/§4/§6 |
 | 2026-11-08 | E1 | sm_v1_6: half-kickoff-reset (HT clear, D pre-2nd KO, opposite seed); §3/§6 |
 | 2026-11-09 | E1 | sm_v1_7: VC visible + sm_v1_6 missing; dual assess command; docs/algorithms |
+| 2026-11-14 | E1 | sm_v2_3 LATEST; three-track assess (A/B/C); research/ archive for experiments |
+| 2026-11-15 | E2 | Ship docs + folder tidy: `requirements-inference.txt`, research quarantine |
+| 2026-11-16 | E1 | sm_v2_4 briefly LATEST then demoted on Track A; restore sm_v2_3 |
