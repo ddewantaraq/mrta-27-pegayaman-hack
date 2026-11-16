@@ -11,7 +11,7 @@ Produce a validated `frame,label` CSV (199,319 rows: `H` / `A` / `D` / `X`) that
 
 Technical direction: tactical ATD → possession state machine → CSV. Optimize for **possession structure** (what private spellF1 rewards), not per-frame accuracy.
 
-**Active model line:** compliant **`sm_v2_3`** (`evaluation/results/LATEST` → `sm_v2_3_compliant.csv` = boosted live/dead + residual ownership + boundary ensemble). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. T27 closed not promoted. `sm_v2_4` error corrector demoted (Track A). Oct `sm_v1_1`…`sm_v2` archive only. Research/training scripts: [../research/](../research/).
+**Active model line:** compliant **`sm_v2_7`** (`evaluation/results/LATEST` → `sm_v2_7_compliant.csv` = boosted live/dead + residual ownership + boundary ensemble + fit-only error corrector + event-first touch model). Rollbacks: `--no-event-first` → sm_v2_6; `--no-error-corrector` → sm_v2_3; `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. T27 closed not promoted. `sm_v2_4` (Track A) and `sm_v2_5` (leaky corrector) demoted. Oct `sm_v1_1`…`sm_v2` archive only. Research/training scripts: [../research/](../research/).
 
 **Compliant levers completed** (rule/physics / external-data citations; no public-floor keep/drop):
 

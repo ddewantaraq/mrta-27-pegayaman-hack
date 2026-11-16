@@ -49,6 +49,8 @@ DEFAULT_METRICA_OUT = os.path.join(
     ROOT, "evaluation", "reports", "assess_metrica.csv")
 DEFAULT_SPORTEC_OUT = os.path.join(
     ROOT, "evaluation", "reports", "assess_sportec.csv")
+DEFAULT_SKILLCORNER_OUT = os.path.join(
+    ROOT, "evaluation", "reports", "assess_skillcorner.csv")
 DEFAULT_SPORTEC_MATCHES = ("J03WMX", "J03WPY", "J03WQQ", "J03WR9")
 
 
@@ -150,6 +152,22 @@ def _print_external_summary(rows, cand_label, ref_label, include_smooth=True):
     return rows
 
 
+def run_leakage_check(cand_path, ref_path):
+    """Print in-sample flags per track; return violations for the candidate."""
+    from leakage_guard import report  # noqa: E402
+
+    print("=== Leakage: model training matches vs evaluation tracks ===")
+    cand_kw, cand_label = _kwargs_for_path(cand_path, fallback="current")
+    ref_kw, ref_label = _kwargs_for_path(ref_path, fallback="latest")
+    cand_lines, bad = report(cand_kw, cand_label, parse_sm_version(cand_path))
+    ref_lines, _ = report(ref_kw, ref_label, parse_sm_version(ref_path))
+    for line in cand_lines + ref_lines:
+        print(line)
+    if bad:
+        print("Gate: candidate adds in-sample evaluation matches: {}".format(bad))
+    return bad
+
+
 def run_track_b(metrica_root, out_csv, cand_path, ref_path, fetch=False):
     from fetch_metrica import fetch_all, DEFAULT_OUT  # noqa: E402
     from eval_external import evaluate_cand_vs_latest, write_csv  # noqa: E402
@@ -174,13 +192,65 @@ def run_track_b(metrica_root, out_csv, cand_path, ref_path, fetch=False):
     return rows
 
 
-def run_track_c(out_csv, cand_path, ref_path, matches, fetch=False):
-    """Full-timeline Sportec suite: cand vs ref (no smooth50 column)."""
+def _block_suite(match_list, cand_kw, ref_kw):
+    """Natural + 2/5/10/30s block dropouts, cand vs ref, one row per cell."""
     import numpy as np
-    from eval_external import run_labeller, score_one, write_csv  # noqa: E402
+    from eval_external import run_labeller, score_one  # noqa: E402
     from dropout import apply_dropout  # noqa: E402
     from external_dataset import dataset  # noqa: E402
     from sportec_experiment import block_dropout  # noqa: E402
+
+    rows = []
+    for game in match_list:
+        feats, gt, graded = dataset(game)
+        for sec in (0, 2, 5, 10, 30):
+            hide = (
+                np.zeros(feats["n_frames"], dtype=bool)
+                if sec == 0
+                else block_dropout(feats["n_frames"], sec)
+            )
+            dropped = apply_dropout(feats, hide)
+            score_hide = hide | (~np.asarray(feats["ball_present"], dtype=bool))
+            for name, kw in (("cand", cand_kw), ("latest", ref_kw)):
+                pred = run_labeller(dropped, graded, kw)
+                rows.append(dict(
+                    game=game,
+                    dropout=("natural" if sec == 0 else "{}s".format(sec)),
+                    candidate=name,
+                    **score_one(gt, pred, score_hide),
+                ))
+            print("  {} {}s".format(game, sec), flush=True)
+    return rows
+
+
+def run_track_d(out_csv, cand_path, ref_path):
+    """SkillCorner hold-out (broadcast tracking); H/A frames only, D/X unlabelled."""
+    from eval_external import write_csv  # noqa: E402
+    from leakage_guard import track_d  # noqa: E402
+
+    matches = list(track_d())
+    if not matches:
+        raise FileNotFoundError(
+            "no Track D split; run research/experiments/skillcorner_label_check.py")
+    cand_kw, cand_label = _kwargs_for_path(cand_path, fallback="current")
+    ref_kw, ref_label = _kwargs_for_path(ref_path, fallback="latest")
+    print("=== Track D: SkillCorner H/A hold-out (broadcast, H/A frames only) ===")
+    print("Matches: {}".format(", ".join(matches)))
+    print("Model versions: {} vs {}.".format(cand_label, ref_label))
+    rows = _block_suite(matches, cand_kw, ref_kw)
+    out_dir = os.path.dirname(out_csv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    write_csv(out_csv, rows)
+    print("wrote {}".format(out_csv))
+    _print_external_summary(rows, cand_label, ref_label, include_smooth=False)
+    print("Gate: no worse than ref on spellF1 and hidden across the hold-out.")
+    return rows
+
+
+def run_track_c(out_csv, cand_path, ref_path, matches, fetch=False):
+    """Full-timeline Sportec suite: cand vs ref (no smooth50 column)."""
+    from eval_external import write_csv  # noqa: E402
 
     cand_kw, cand_label = _kwargs_for_path(cand_path, fallback="current")
     ref_kw, ref_label = _kwargs_for_path(ref_path, fallback="latest")
@@ -216,27 +286,7 @@ def run_track_c(out_csv, cand_path, ref_path, matches, fetch=False):
             "(or pass --fetch-sportec). Use --skip-sportec to omit Track C.".format(
                 sportec_root, ", ".join(missing), " ".join(missing)))
 
-    rows = []
-    for game in match_list:
-        feats, gt, graded = dataset(game)
-        for sec in (0, 2, 5, 10, 30):
-            hide = (
-                np.zeros(feats["n_frames"], dtype=bool)
-                if sec == 0
-                else block_dropout(feats["n_frames"], sec)
-            )
-            dropped = apply_dropout(feats, hide)
-            score_hide = hide | (~np.asarray(feats["ball_present"], dtype=bool))
-            for name, kw in (("cand", cand_kw), ("latest", ref_kw)):
-                pred = run_labeller(dropped, graded, kw)
-                rows.append(dict(
-                    game=game,
-                    dropout=("natural" if sec == 0 else "{}s".format(sec)),
-                    candidate=name,
-                    **score_one(gt, pred, score_hide),
-                ))
-            print("  {} {}s".format(game, sec), flush=True)
-
+    rows = _block_suite(match_list, cand_kw, ref_kw)
     out_dir = os.path.dirname(out_csv)
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -283,6 +333,15 @@ def main(argv=None):
         "--sportec-matches", nargs="+", default=list(DEFAULT_SPORTEC_MATCHES),
         help="Sportec match IDs for Track C")
     parser.add_argument(
+        "--skillcorner", action="store_true",
+        help="also run Track D (SkillCorner hold-out; needs fetch_skillcorner.py)")
+    parser.add_argument(
+        "--skillcorner-out", default=DEFAULT_SKILLCORNER_OUT,
+        help="CSV path for Track D row dump")
+    parser.add_argument(
+        "--allow-leakage", action="store_true",
+        help="run even if the candidate trains on evaluation-track matches")
+    parser.add_argument(
         "--public-log", action="store_true",
         help="optional: also run public 5-min scorer (log only, not a keep gate)")
     args = parser.parse_args(argv)
@@ -292,6 +351,12 @@ def main(argv=None):
         print("FAIL  missing --cand {}".format(cand), file=sys.stderr)
         return 1
     ref_path = os.path.abspath(args.ref) if args.ref else read_latest()
+
+    leaks = run_leakage_check(cand, ref_path)
+    if leaks and not args.allow_leakage:
+        print("FAIL  leakage guard (pass --allow-leakage for diagnostics only)",
+              file=sys.stderr)
+        return 1
 
     track_errs = []
 
@@ -311,7 +376,17 @@ def main(argv=None):
         except Exception as exc:
             track_errs.append(("C", exc))
 
+    def _d():
+        try:
+            run_track_d(args.skillcorner_out, cand, ref_path)
+        except Exception as exc:
+            track_errs.append(("D", exc))
+
     threads = []
+    if args.skillcorner:
+        t = threading.Thread(target=_d)
+        t.start()
+        threads.append(t)
     if not args.skip_metrica:
         t = threading.Thread(target=_b)
         t.start()

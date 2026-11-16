@@ -153,8 +153,19 @@ def sm_v1_3_kwargs():
 
 def run_labeller(features, graded, kwargs):
     kw = dict(kwargs)
+    event_first = kw.pop('event_first_model', None)
+    if event_first is not None:
+        from player_node_data import load_player_nodes
+        from event_first_model import apply_event_first
+        reference = run_labeller(features, graded, kw)
+        return apply_event_first(
+            features, reference, graded, load_player_nodes(str(features['game'])),
+            event_first, minimum=kw.get('min_spell_frames', DEFAULT_MIN_SPELL_FRAMES))
     corrector_model = kw.pop('error_corrector_model', None)
     corrector_margin = kw.pop('error_corrector_margin', None)
+    corrector_window = kw.pop('error_corrector_window', None)
+    corrector_min_island = kw.pop('error_corrector_min_island', None)
+    corrector_structure_guard = kw.pop('error_corrector_structure_guard', None)
     boundary_model=kw.pop('boundary_ensemble_model',None)
     if boundary_model is not None:
         from player_node_data import load_player_nodes
@@ -174,12 +185,23 @@ def run_labeller(features, graded, kwargs):
             confidence_threshold=confidence)
         if corrector_model is not None:
             from error_corrector_model import (
-                apply_error_corrector, DEFAULT_CORRECTOR_MARGIN)
+                apply_error_corrector, DEFAULT_CORRECTOR_MARGIN,
+                DEFAULT_CORRECTOR_WINDOW, DEFAULT_CORRECTOR_MIN_ISLAND,
+                DEFAULT_CORRECTOR_STRUCTURE_GUARD)
             margin = (DEFAULT_CORRECTOR_MARGIN if corrector_margin is None
                       else corrector_margin)
+            window = (DEFAULT_CORRECTOR_WINDOW if corrector_window is None
+                      else corrector_window)
+            min_island = (DEFAULT_CORRECTOR_MIN_ISLAND if corrector_min_island is None
+                          else corrector_min_island)
+            structure_guard = (
+                DEFAULT_CORRECTOR_STRUCTURE_GUARD
+                if corrector_structure_guard is None
+                else bool(corrector_structure_guard))
             return apply_error_corrector(
                 features, labels, graded, nodes, corrector_model,
-                margin=margin,
+                margin=margin, window=window, min_island=min_island,
+                structure_guard=structure_guard,
                 minimum=kw.get('min_spell_frames', DEFAULT_MIN_SPELL_FRAMES))
         return labels
     residual_model = kw.pop('residual_ownership_model',None)
@@ -428,12 +450,35 @@ def evaluate_vc_splice(root):
 
 def kwargs_for_version(major, minor):
     """Metrica kwargs for an approved model version. Extend when promoting."""
-    if (major, minor) == (2, 4):
+    if (major, minor) == (2, 7):
+        from event_first_model import DEFAULT_EVENT_FIRST_PATH
+        kw = kwargs_for_version(2, 6)
+        kw['event_first_model'] = DEFAULT_EVENT_FIRST_PATH
+        return kw
+    if (major, minor) == (2, 6):
         from error_corrector_model import (
-            DEFAULT_CORRECTOR_PATH, DEFAULT_CORRECTOR_MARGIN)
+            HONEST_CORRECTOR_PATH, HONEST_CORRECTOR_MARGIN)
         kw = kwargs_for_version(2, 3)
-        kw['error_corrector_model'] = DEFAULT_CORRECTOR_PATH
-        kw['error_corrector_margin'] = DEFAULT_CORRECTOR_MARGIN
+        kw['error_corrector_model'] = HONEST_CORRECTOR_PATH
+        kw['error_corrector_margin'] = HONEST_CORRECTOR_MARGIN
+        kw['error_corrector_window'] = 0
+        kw['error_corrector_min_island'] = 1
+        kw['error_corrector_structure_guard'] = False
+        return kw
+    if (major, minor) == (2, 5):
+        from error_corrector_model import V25_CORRECTOR_PATH, V25_CORRECTOR_MARGIN
+        kw = kwargs_for_version(2, 3)
+        kw['error_corrector_model'] = V25_CORRECTOR_PATH
+        kw['error_corrector_margin'] = V25_CORRECTOR_MARGIN
+        kw['error_corrector_window'] = 0
+        kw['error_corrector_min_island'] = 1
+        kw['error_corrector_structure_guard'] = False
+        return kw
+    if (major, minor) == (2, 4):
+        from error_corrector_model import V25_CORRECTOR_PATH, V24_CORRECTOR_MARGIN
+        kw = kwargs_for_version(2, 3)
+        kw['error_corrector_model'] = V25_CORRECTOR_PATH
+        kw['error_corrector_margin'] = V24_CORRECTOR_MARGIN
         return kw
     if (major, minor) == (2, 3):
         kw = kwargs_for_version(1, 10)
@@ -499,7 +544,15 @@ def current_cand_kwargs():
         kw['set_ownership_model'] = DEFAULT_SET_OWNERSHIP_PATH
         kw['set_ownership_policy'] = DEFAULT_SET_OWNERSHIP_POLICY
     if DEFAULT_USE_BOUNDARY_ENSEMBLE:
+        from error_corrector_model import (
+            DEFAULT_USE_ERROR_CORRECTOR, DEFAULT_CORRECTOR_PATH, DEFAULT_CORRECTOR_MARGIN)
+        from event_first_model import DEFAULT_USE_EVENT_FIRST, DEFAULT_EVENT_FIRST_PATH
         kw['boundary_ensemble_model']=DEFAULT_BOUNDARY_MODEL_PATH
+        if DEFAULT_USE_ERROR_CORRECTOR:
+            kw['error_corrector_model'] = DEFAULT_CORRECTOR_PATH
+            kw['error_corrector_margin'] = DEFAULT_CORRECTOR_MARGIN
+            if DEFAULT_USE_EVENT_FIRST:
+                kw['event_first_model'] = DEFAULT_EVENT_FIRST_PATH
     elif DEFAULT_USE_RESIDUAL_OWNERSHIP:
         kw['residual_ownership_model'] = DEFAULT_RESIDUAL_MODEL_PATH
     return kw

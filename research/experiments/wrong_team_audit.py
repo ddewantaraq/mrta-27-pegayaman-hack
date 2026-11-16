@@ -43,11 +43,16 @@ def dist_to_switch(gt, live):
     return dist
 
 
-def audit_match(game):
+def parse_version(text):
+    major, minor = text.split('.')
+    return int(major), int(minor)
+
+
+def audit_match(game, version=(2, 5)):
     data = load_match(game)
     f, gt, graded, nodes = data['features'], data['gt'], data['graded'], data['nodes']
-    pred = run_labeller(f, graded, kwargs_for_version(2, 4))
-    # Baseline without node corrector for logits: use v2.3 stack then ensemble
+    pred = run_labeller(f, graded, kwargs_for_version(*version))
+    # Ensemble logits are defined on the boundary stack (v2.3).
     base23 = run_labeller(f, graded, kwargs_for_version(2, 3))
     logits = ensemble_team_logits(f, graded, nodes, base23)
     present = np.asarray(f['ball_present'], bool)
@@ -124,23 +129,26 @@ def recommend_priors(rows):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--matches', nargs='+', default=MATCHES)
+    parser.add_argument('--version', default='2.5',
+                        help='labeller version major.minor (default 2.5)')
     parser.add_argument('--out', default=str(REPORTS / 'wrong_team_audit.json'))
     args = parser.parse_args()
+    version = parse_version(args.version)
     rows = []
     for game in args.matches:
-        print('audit', game, flush=True)
-        row = audit_match(game)
+        print('audit', game, 'v{}.{}'.format(*version), flush=True)
+        row = audit_match(game, version=version)
         rows.append(row)
         print(' ', game, 'wrong', row['wrong_n'], '/', row['live_n'],
               'rate', round(row['wrong_rate'], 4),
               'short_isl', round(row['visible_wrong'].get('pct_island_le_12', 0), 3), flush=True)
     priors = recommend_priors(rows)
-    summary = dict(matches=rows, priors=priors,
+    summary = dict(version='{}.{}'.format(*version), matches=rows, priors=priors,
                    mean_wrong_rate=float(np.mean([r['wrong_rate'] for r in rows])))
     Path(args.out).write_text(json.dumps(summary, indent=2))
-    note = REPORTS / 'wrong_team_audit_note.md'
+    note = Path(args.out).with_name(Path(args.out).stem + '_note.md')
     lines = [
-        '# Wrong-team audit (sm_v2_4)',
+        '# Wrong-team audit (sm_v{}.{})'.format(*version),
         '',
         'Mean wrong-team rate: {:.4f}'.format(summary['mean_wrong_rate']),
         'Recommended priors: margin={}, window={}, min_island={}'.format(
@@ -158,7 +166,7 @@ def main():
             vw.get('pct_near_switch_le_12', float('nan')),
             vw.get('mean_abs_logit', float('nan'))))
     note.write_text('\n'.join(lines) + '\n')
-    print(json.dumps(priors, indent=2))
+    print(json.dumps(dict(version=summary['version'], **priors), indent=2))
 
 
 if __name__ == '__main__':

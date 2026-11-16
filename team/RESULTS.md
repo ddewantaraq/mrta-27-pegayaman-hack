@@ -1,5 +1,118 @@
 # Results log
 
+### 2026-11-16: sm_v2_7 event-first touch model (+ SkillCorner) — promoted
+
+sm_v2_6 plus a touch-team model: ball touch candidates, a HGB touch classifier
+exported to NumPy trees, a two-state Viterbi decode and a conservative
+overwrite (visible frames only, only where the decode disagrees with v2.6 and
+|logit| ≥ 1.0). Trained on the fit set plus the 16 SkillCorner training-split
+matches; selected by fit LOMO and SkillCorner training folds (never Track D).
+
+| Track | sm_v2_7 | sm_v2_6 |
+|---|---:|---:|
+| A spells / mean_s / s25 | **339 / 8.73 / 7** | 342 / 8.65 / 8 |
+| B Metrica spellF1 / hidden | **0.6654** / 0.8014 | 0.6474 / 0.8014 |
+| C Sportec spellF1 / hidden | **0.6218** / 0.8069 | 0.6187 / 0.8069 |
+| D SkillCorner spellF1 / hidden | **0.4381 / 0.7272** | 0.4365 / 0.7271 |
+
+Hidden accuracy: Track B +22 frames, Track D +14, Track C net −2 frames (tied
+at 4 dp, same tie convention as v2.5/v2.6). All four Sportec matches improve
+spellF1. The fit-only event-first variant was rejected (Track D 0.4328).
+SkillCorner retrains of the corrector (+0.0011 fit LOMO, held) and boundary
+head (−0.0033, rejected) were not shipped. NumPy parity 0.0; default predict
+is byte-identical to `sm_v2_7_compliant.csv`. `LATEST` → `sm_v2_7_compliant.csv`.
+Rollback `--no-event-first` → sm_v2_6. Artifacts:
+`evaluation/reports/sm_v2_7_decision.json`, `assess_sm_v2_7.log`,
+`event_first_crossfit*.json`, `research/experiments/event_first.py`.
+
+### 2026-11-16: sm_v2_6 honest corrector — promoted (sm_v2_5 demoted as leaky)
+
+New leakage guard (`starter/external/leakage_guard.py`, run by `assess.py`)
+showed `error_corrector_v1` was trained on matches in Tracks B/C. Retrained it
+on the fit set only (J03WOH, J03WN1, J03WOY, Sample_Game_3) with the margin
+picked by fit LOMO (2.5) → `error_corrector_v2.json`.
+
+| Track | sm_v2_6 | sm_v2_3 |
+|---|---:|---:|
+| A spells / mean_s / s25 | 342 / 8.65 / 8 | 342 / 8.65 / 8 |
+| B Metrica spellF1 / hidden | **0.6474** / 0.8014 | 0.6443 / 0.8014 |
+| C Sportec spellF1 / hidden | **0.6187** / 0.8069 | 0.6161 / 0.8069 |
+
+Also tried and rejected: a 3-seed boundary weight soup (−0.0018 crossfit) and
+raising the minimum spell (short spells are not the bottleneck; stays 18 f,
+`short_spell_ceiling.json`). Artifacts: `honest_anchor_decision.json`,
+`honest_corrector.json`, `assess_sm_v2_6.log`.
+
+### 2026-11-16: boundary transition retrain — held (keep sm_v2_5)
+
+v2.5 audit still shows ~32% missed GT switches (~94% contested). Built
+deterministic `boundary_crossfit.py` (control ≈ 0.7204 vs v2.3 0.7205). Ladder
+of training-side boundary upgrades all failed vs sm_v2_5 natural crossfit
+(~0.723):
+
+| Tag | mean spell | Δv2.5 | worst Δv2.5 |
+|---|---:|---:|---:|
+| control_v1 | 0.7204 | −0.0027 | −0.018 |
+| rung_a (loss 0.5 / pos 20) | 0.7198 | −0.0033 | −0.016 |
+| rung_b (σ=3 / trunc=10) | **0.7208** | −0.0023 | −0.009 |
+| rung_c contested×2/×3 | 0.7197 / 0.7191 | −0.0034 / −0.0040 | −0.015 / −0.016 |
+| rung_d transition ctx | 0.7196 | −0.0035 | −0.015 |
+| stacked B+D / A+B+D | 0.7202 / 0.7188 | −0.0029 / −0.0043 | −0.014 / −0.017 |
+
+No corrector retrain or ship model. `LATEST` remains `sm_v2_5_compliant.csv`.
+Artifacts: `evaluation/reports/boundary_v2_decision.json`,
+`evaluation/reports/boundary_cf/`, `v25_audit_*.json`,
+`research/experiments/boundary_crossfit.py`.
+
+### 2026-11-16: sm_v2_5 structure-preserving corrector — promoted
+
+High-margin retune of the live-team error corrector (`margin=3.0`, window=0,
+min-island=1, no structure_guard) on frozen sm_v2_3. Only apply regime that
+cleared Track A without a challenge-only guard while still beating B/C.
+
+| Track | sm_v2_5 | sm_v2_3 |
+|---|---:|---:|
+| A spells / mean_s / s25 | **341 / 8.68 / 8** | 342 / 8.65 / 8 |
+| B Metrica spellF1 / hidden | **0.6509 / 0.8014** | 0.6443 / 0.8014 |
+| C Sportec spellF1 / hidden | **0.6191 / 0.8069** | 0.6161 / 0.8069 |
+| Crossfit natural spellF1 | **0.7220** (+0.0015) | 0.7205 |
+
+`LATEST` → `sm_v2_5_compliant.csv`. Default predict enables the corrector;
+rollback `--no-error-corrector`. Artifacts:
+`evaluation/reports/sm_v2_5_decision.json`,
+`structure_preserving_corrector.json`, `assess_sm_v2_5.log`,
+`research/experiments/structure_preserving_corrector.py`.
+
+### 2026-11-16: insert-only contested switches — held (keep sm_v2_3)
+
+Follow-up to the failed sparse switch editor: **insert-only** proposals at
+contested peaks with ensemble polarity disagreement across the peak, single-side
+flip, min-island/sep caps, top-K. No delete/retarget. Nested tune on mean Δ over
+3 train matches.
+
+**Crossfit gate vs sm_v2_3: FAIL** (mean natural spellF1 0.7191 < 0.7205;
+worst Δ −0.0077). Boundary-gated probe also flat/down. Not promoted.
+`LATEST` remains `sm_v2_3_compliant.csv`. Artifacts:
+`evaluation/reports/crossfit_insert_only.json`, `insert_only_v25_decision.json`,
+`research/experiments/insert_only_switches.py`.
+
+### 2026-11-16: sm_v2_5 sparse switch editor — held (keep sm_v2_3)
+
+Switch-timing audit on sm_v2_3: median |offset| ~4f on matched switches; miss
+rate ~0.32 with ~95% of missed GT switches sitting on contested peaks; false
+rate ~0.19. Built contested-band features + crossfit HistGBM editor
+(retarget/delete/insert) applied only in ±R neighborhoods on frozen v2.3.
+
+**Crossfit gate vs sm_v2_3 (10 matches): FAIL**
+- mean natural spellF1 0.6688 < 0.7205
+- worst spell Δ −0.116 (Sample_Game_3)
+- Track A cand looked “smoother” (183 spells / s25=4) but that was over-merging,
+  not better ownership
+
+Not promoted. `LATEST` remains `sm_v2_3_compliant.csv`. Artifacts:
+`evaluation/reports/crossfit_switch_editor.json`, `switch_timing_audit.json`,
+`switch_editor_v25_decision.json`, `research/experiments/switch_editor.py`.
+
 ### 2026-11-16: sm_v2_4 demoted — restore sm_v2_3 as LATEST
 
 Track A structure vs sm_v2_3: spells 353 vs 342, mean 8.38 vs 8.65 s, s25 10 vs 8
@@ -236,9 +349,9 @@ See [experiment and reproduction](../research/docs/live-islands.md).
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** … → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** → **`sm_v2_2`** → **`sm_v2_3`** (boundary ownership ensemble). **Approved best:** `evaluation/results/LATEST` → `sm_v2_3_compliant.csv`. (`sm_v2_4` error corrector demoted.) Historical public-GT-era bare files are not this compliant line. Research scripts live under [../research/](../research/).
+- **Forward path:** … → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** → **`sm_v2_2`** → **`sm_v2_3`** → **`sm_v2_6`** (honest fit-only corrector) → **`sm_v2_7`** (event-first touch model). **Approved best:** `evaluation/results/LATEST` → `sm_v2_7_compliant.csv`. (`sm_v2_5` demoted: corrector trained on evaluation matches; `sm_v2_4` margin-1.5 demoted on Track A.) Historical public-GT-era bare files are not this compliant line. Research scripts live under [../research/](../research/).
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process. Auto predict floors on **LATEST**, not max bare archive.
-- **How we assess (not Oct):** three tracks via `assess.sh` — **A** structure (cand vs ref vs smooth50); **B** Metrica H/A; **C** Sportec full-timeline suite (optional `--skip-sportec`). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
+- **How we assess (not Oct):** four tracks via `assess.sh` — **A** structure (cand vs ref vs smooth50); **B** Metrica H/A; **C** Sportec full-timeline suite (optional `--skip-sportec`); **D** SkillCorner hold-out (`--skillcorner`), plus a leakage check. Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
 How to fill: `bash assess.sh <cand.csv>` (or predict → assess); add a RESULTS row. See [BEGINNER.md](BEGINNER.md).
 
@@ -278,7 +391,10 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-14 | sm_v1_9_compliant | Codex | — | — | — | — | Prior LATEST; protected learned D; local 331 spells / mean 16.84 / s12 3 / s25 8; external Metrica spellF1 0.4961; Sportec excluded-match spellF1 0.4143 |
 | 2026-11-14 | sm_v1_10_compliant | Codex | — | — | — | — | Prior LATEST; calibrated boosted D; local 294 spells / mean 10.07 / s12 0 / s25 2; original Metrica suite 0.5716 (includes training Game 1); five excluded-match whole-timeline suite 0.4811 |
 | 2026-11-14 | sm_v2_2_compliant | Codex | — | — | — | — | Prior LATEST; residual ownership; local 319 spells / mean 9.28 / s12 0 / s25 13; Metrica suite spellF1 0.6345 / hidden 0.7878 |
-| 2026-11-14 | sm_v2_3_compliant | Codex | — | — | — | — | **LATEST**; boundary ensemble; local 342 spells / mean 8.65 / s12 0 / s25 8; Metrica vs v2.2 spellF1 0.6443 / hidden 0.8014 (both games); SHA256 `597e3ba8…` |
+| 2026-11-14 | sm_v2_3_compliant | Codex | — | — | — | — | Prior LATEST; boundary ensemble; local 342 spells / mean 8.65 / s12 0 / s25 8; Metrica vs v2.2 spellF1 0.6443 / hidden 0.8014 (both games); SHA256 `597e3ba8…` |
+| 2026-11-16 | sm_v2_7_compliant | Codex | — | — | — | — | **LATEST**; event-first touch model on v2.6; local 339 spells / mean 8.73 / s12 0 / s25 7; Metrica 0.6654 / 0.8014; Sportec 0.6218 / 0.8069; SkillCorner D 0.4381 / 0.7272; SHA256 `017b9546…` |
+| 2026-11-16 | sm_v2_6_compliant | Codex | — | — | — | — | Prior LATEST; fit-only corrector (margin 2.5); local 342 / 8.65 / 0 / 8; Metrica 0.6474 / 0.8014; Sportec 0.6187 / 0.8069; SHA256 `c912639c…` |
+| 2026-11-16 | sm_v2_5_compliant | Codex | — | — | — | — | Demoted (leaky corrector); margin-3 error corrector on v2.3; local 341 spells / mean 8.68 / s12 0 / s25 8; Metrica spellF1 0.6509 / hidden 0.8014; Sportec 0.6191 / 0.8069; SHA256 `8b5ff700…` |
 | 2026-11-16 | sm_v2_4_compliant | Codex | — | — | — | — | Demoted; error corrector on v2.3; local 353 spells / mean 8.38 / s12 0 / s25 10; Metrica spellF1 0.6650 / hidden 0.8015; Sportec 0.6226 / 0.8069; SHA256 `cd684645…` |
 | | | | | | | | |
 
@@ -355,3 +471,7 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-14 | **sm_v2_3** boundary ownership ensemble | **yes (default / LATEST)** | Beats v2.2 on Metrica A+B. Rollback `--no-boundary-model`. [../docs/algorithms/boundary-ownership-research.md](../docs/algorithms/boundary-ownership-research.md). |
 | 2026-11-16 | sm_v2_4 live-team error corrector | **no (demoted)** | Crossfit/B/C up vs v2.3 but Track A s25 8→10 / mean down; restore v2.3. Opt-in `--error-corrector-file`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
 | 2026-11-16 | sm_v2_5 player-node corrector | **no (held)** | Crossfit spell 0.722 < then-v2.4 0.729; vis acc down; worst Δ −0.025. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | sm_v2_5 sparse switch editor | **no (held)** | Crossfit spell 0.669 < v2.3 0.721; worst Δ −0.116. Keep v2.3. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | insert-only contested switches | **no (held)** | Crossfit spell 0.719 < v2.3 0.721; safer inserts still flat. Keep v2.3. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | **sm_v2_5** structure-preserving corrector (margin 3.0) | **yes (default / LATEST)** | Pareto vs v2.3: Track A mean↑/spells↓, B/C spell↑, hidden ≥. Rollback `--no-error-corrector`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | boundary transition retrain ladder | **no (held)** | Best rung_b 0.7208 < v2.5 0.723; hidden regresses. Keep v2.5. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |

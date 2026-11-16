@@ -8,9 +8,12 @@ By default writes the next file after evaluation/results/LATEST (approved best):
   only when that bare name already exists. Pass --out PATH to force a path.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v2_3 (boundary ownership ensemble).
-Optional: --error-corrector-file -> sm_v2_4 research stack.
-Rollback: --no-boundary-model -> sm_v2_2;
+Defaults = compliant sm_v2_7 (boundary ensemble + fit-only error corrector
+v2 at margin 2.5 + event-first touch model).
+Rollback: --no-event-first -> sm_v2_6;
+--error-corrector-file starter/models/error_corrector_v1.json
+--error-corrector-margin 3 --no-event-first -> demoted sm_v2_5;
+--no-error-corrector -> sm_v2_3; --no-boundary-model -> sm_v2_2;
 --no-team-model -> sm_v1_10;
 --dead-model logistic -> sm_v1_9;
 --no-learned-dead -> sm_v1_8.
@@ -47,6 +50,7 @@ from boundary_ensemble_model import (
 from error_corrector_model import (
     DEFAULT_CORRECTOR_PATH, DEFAULT_USE_ERROR_CORRECTOR,
     DEFAULT_CORRECTOR_MARGIN)
+from event_first_model import DEFAULT_EVENT_FIRST_PATH, DEFAULT_USE_EVENT_FIRST
 
 from games import GAME  # noqa: E402
 from features import (  # noqa: E402
@@ -146,12 +150,22 @@ def main():
     parser.add_argument('--dead-confidence', type=float, default=None,
                         help='only force D when boosted dead probability >= this')
     parser.add_argument('--error-corrector-file', default=None,
-                        help='enable NumPy live-team error corrector (sm_v2_4 research; off by default)')
+                        help='override error-corrector JSON (default on for sm_v2_5)')
     parser.add_argument('--no-error-corrector', action='store_true',
-                        help='explicitly keep error corrector off (default = sm_v2_3)')
+                        help='disable error corrector (rollback to sm_v2_3)')
     parser.add_argument('--error-corrector-margin', type=float,
                         default=DEFAULT_CORRECTOR_MARGIN,
-                        help='|logit| margin required to flip a live team label')
+                        help='|logit| margin required to flip a live team label (sm_v2_5=3.0)')
+    parser.add_argument('--error-corrector-window', type=int, default=0,
+                        help='±frames neighbors must agree before a flip (0=off)')
+    parser.add_argument('--error-corrector-min-island', type=int, default=1,
+                        help='suppress flip runs shorter than this (1=off)')
+    parser.add_argument('--error-corrector-structure-guard', action='store_true',
+                        help='drop flip islands until Track A structure ≤ reference')
+    parser.add_argument('--event-first-file', default=None,
+                        help='override event-first touch model JSON (default on for sm_v2_7)')
+    parser.add_argument('--no-event-first', action='store_true',
+                        help='disable the event-first touch model (rollback to sm_v2_6)')
     parser.add_argument('--team-policy', choices=('full','run90_mean90'),
                         default=DEFAULT_SET_OWNERSHIP_POLICY,
                         help='ownership replacement policy; full is the ungated research candidate')
@@ -361,6 +375,12 @@ def main():
     if (corrector_path is None and boundary_model_path is not None
             and DEFAULT_USE_ERROR_CORRECTOR and not args.no_error_corrector):
         corrector_path = DEFAULT_CORRECTOR_PATH
+    event_first_path = args.event_first_file
+    if args.no_event_first and event_first_path:
+        parser.error('--no-event-first conflicts with --event-first-file')
+    if (event_first_path is None and corrector_path is not None
+            and DEFAULT_USE_EVENT_FIRST and not args.no_event_first):
+        event_first_path = DEFAULT_EVENT_FIRST_PATH
     team_model_path = args.team_model_file
     if args.no_team_model and team_model_path:
         parser.error('--no-team-model conflicts with --team-model-file')
@@ -523,7 +543,16 @@ def main():
         labels = apply_error_corrector(
             features, labels, graded_mask(features['n_frames'], args.game),
             player_nodes, corrector_path, margin=args.error_corrector_margin,
+            window=args.error_corrector_window,
+            min_island=args.error_corrector_min_island,
+            structure_guard=args.error_corrector_structure_guard,
             minimum=args.min_spell_frames)
+    if event_first_path:
+        from event_first_model import apply_event_first
+        from state_machine import graded_mask
+        labels = apply_event_first(
+            features, labels, graded_mask(features['n_frames'], args.game),
+            player_nodes, event_first_path, minimum=args.min_spell_frames)
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
     rel = os.path.relpath(path, ROOT).replace(os.sep, "/")

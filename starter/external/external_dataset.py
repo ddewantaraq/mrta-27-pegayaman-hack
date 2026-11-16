@@ -11,6 +11,7 @@ from sportec_experiment import cached_sportec
 from metrica_gt import build_metrica_gt
 from fetch_metrica import DEFAULT_OUT
 from metrica_features import extract_metrica_features
+from skillcorner_features import cached_skillcorner, is_skillcorner
 
 
 def cached_metrica_features(game, root=None):
@@ -35,6 +36,8 @@ def dataset(game):
         feats = cached_metrica_features(game)
         truth = build_metrica_gt(game, feats["n_frames"], root=DEFAULT_OUT)
         graded = np.ones(feats["n_frames"], dtype=bool)
+    elif is_skillcorner(game):
+        feats, truth, graded = cached_skillcorner(game)
     else:
         feats, truth, graded = cached_sportec(game)
     if "player_motion" not in feats:

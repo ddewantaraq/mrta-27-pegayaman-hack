@@ -12,10 +12,21 @@ from residual_ownership_model import DEFAULT_RESIDUAL_MODEL_PATH
 from boundary_ensemble_model import DEFAULT_BOUNDARY_MODEL_PATH
 from state_machine import _merge_short_spells
 
-DEFAULT_CORRECTOR_PATH = str(
+# sm_v2_6 / sm_v2_7: corrector fit and margin-tuned on fit matches only.
+HONEST_CORRECTOR_PATH = str(
+    Path(__file__).resolve().parent / 'models' / 'error_corrector_v2.json')
+HONEST_CORRECTOR_MARGIN = 2.5
+# Demoted sm_v2_4 / sm_v2_5: corrector v1 trained on Track B/C matches too.
+V25_CORRECTOR_PATH = str(
     Path(__file__).resolve().parent / 'models' / 'error_corrector_v1.json')
-DEFAULT_USE_ERROR_CORRECTOR = False  # demoted: Track A s25/mean vs sm_v2_3; keep v2.3 as LATEST
-DEFAULT_CORRECTOR_MARGIN = 1.5
+V25_CORRECTOR_MARGIN = 3.0
+V24_CORRECTOR_MARGIN = 1.5
+DEFAULT_CORRECTOR_PATH = HONEST_CORRECTOR_PATH
+DEFAULT_USE_ERROR_CORRECTOR = True
+DEFAULT_CORRECTOR_MARGIN = HONEST_CORRECTOR_MARGIN
+DEFAULT_CORRECTOR_WINDOW = 0
+DEFAULT_CORRECTOR_MIN_ISLAND = 1
+DEFAULT_CORRECTOR_STRUCTURE_GUARD = False
 FEATURE_VERSION = 'error_correct_v1'
 
 
@@ -74,9 +85,105 @@ def ensemble_team_logits(features, graded, nodes, reference):
     return 0.5 * (old + newer)
 
 
+def _suppress_short_islands(flip_mask, labels, graded, min_island):
+    """Drop flip runs shorter than min_island unless they abut D/X/ungraded."""
+    if min_island <= 1 or not np.any(flip_mask):
+        return flip_mask
+    out = flip_mask.copy()
+    n = len(flip_mask)
+    i = 0
+    while i < n:
+        if not out[i]:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and out[j]:
+            j += 1
+        if (j - i) < min_island:
+            left_barrier = (i == 0) or (not graded[i - 1]) or labels[i - 1] in ('D', 'X')
+            right_barrier = (j == n) or (not graded[j]) or labels[j] in ('D', 'X')
+            if not (left_barrier or right_barrier):
+                out[i:j] = False
+        i = j
+    return out
+
+
+def _window_agree(propose, propose_lab, corr, labels, margin, window):
+    """Require ±window neighbors to share proposed team (or also be confident)."""
+    if window <= 0 or not np.any(propose):
+        return propose
+    want = propose.copy()
+    agree = np.ones(len(labels), bool)
+    neighbor_ok = (np.abs(corr) >= float(margin)) | (labels == propose_lab)
+    for d in range(1, int(window) + 1):
+        same_l = np.ones(len(labels), bool)
+        same_r = np.ones(len(labels), bool)
+        same_l[d:] = propose_lab[d:] == propose_lab[:-d]
+        same_r[:-d] = propose_lab[:-d] == propose_lab[d:]
+        conf_l = np.ones(len(labels), bool)
+        conf_r = np.ones(len(labels), bool)
+        conf_l[d:] = neighbor_ok[:-d]
+        conf_r[:-d] = neighbor_ok[d:]
+        agree &= same_l & same_r & conf_l & conf_r
+    want &= agree
+    return want
+
+
+def _structure_ok(cand, ref, graded):
+    from vc_possession import live_structure
+    c = live_structure(cand, graded)
+    r = live_structure(ref, graded)
+    return (c['short12'] <= r['short12']
+            and c['short25'] <= r['short25']
+            and c['mean_s'] + 1e-9 >= r['mean_s']
+            and c['n_spells'] <= r['n_spells'] + 2)
+
+
+def _flip_islands(mask):
+    islands = []
+    n = len(mask)
+    i = 0
+    while i < n:
+        if not mask[i]:
+            i += 1
+            continue
+        j = i + 1
+        while j < n and mask[j]:
+            j += 1
+        islands.append((i, j))
+        i = j
+    return islands
+
+
+def _apply_with_structure_guard(reference, graded, want, corr_home, corr, minimum):
+    """Drop lowest-|corr| flip islands until structure ≤ reference, else no-op."""
+    ref = np.asarray(reference)
+    graded = np.asarray(graded, bool)
+    want = want.copy()
+    while np.any(want):
+        labels = ref.copy()
+        labels[want] = np.where(corr_home[want], 'H', 'A')
+        labels = _merge_short_spells(labels, graded, minimum)
+        if _structure_ok(labels, ref, graded):
+            return labels
+        islands = _flip_islands(want)
+        if not islands:
+            break
+        # Drop the least-confident island (lowest mean |corr|).
+        scores = [float(np.mean(np.abs(corr[a:b]))) for a, b in islands]
+        drop_i = int(np.argmin(scores))
+        a, b = islands[drop_i]
+        want[a:b] = False
+    return _merge_short_spells(ref.copy(), graded, minimum)
+
+
 def apply_error_corrector(features, reference, graded, nodes,
                           model_path=DEFAULT_CORRECTOR_PATH,
-                          margin=DEFAULT_CORRECTOR_MARGIN, minimum=18):
+                          margin=DEFAULT_CORRECTOR_MARGIN,
+                          window=DEFAULT_CORRECTOR_WINDOW,
+                          min_island=DEFAULT_CORRECTOR_MIN_ISLAND,
+                          structure_guard=DEFAULT_CORRECTOR_STRUCTURE_GUARD,
+                          minimum=18):
     labels = np.asarray(reference).copy()
     graded = np.asarray(graded, bool)
     team_logits = ensemble_team_logits(features, graded, nodes, labels)
@@ -87,6 +194,12 @@ def apply_error_corrector(features, reference, graded, nodes,
     live = graded & present & np.isin(labels, ['H', 'A'])
     corr_home = corr >= 0
     base_home = labels == 'H'
-    disagree = live & (corr_home != base_home) & (np.abs(corr) >= float(margin))
-    labels[disagree] = np.where(corr_home[disagree], 'H', 'A')
+    propose = live & (corr_home != base_home) & (np.abs(corr) >= float(margin))
+    propose_lab = np.where(corr_home, 'H', 'A')
+    want = _window_agree(propose, propose_lab, corr, labels, margin, int(window))
+    want = _suppress_short_islands(want, labels, graded, int(min_island))
+    if structure_guard:
+        return _apply_with_structure_guard(
+            labels, graded, want, corr_home, corr, minimum)
+    labels[want] = np.where(corr_home[want], 'H', 'A')
     return _merge_short_spells(labels, graded, minimum)
