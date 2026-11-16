@@ -1,6 +1,7 @@
 # Research beyond sm_v2_2
 
 Status: boundary ensemble `sm_v2_3` is promoted and named in `LATEST`.
+(`sm_v2_4` error corrector was briefly promoted then demoted on Track A.)
 No challenge possession
 reference or public score is used for fitting, selection or these experiments.
 
@@ -107,6 +108,24 @@ generations (preview, explicit artifact, and default base-Python inference
 without PyTorch) are byte-identical, SHA256
 `C6D6ECB8B04D8DBA1AF26D944C857A94BD0C0A930E24D5F554D4103AA250D9C6`.
 `--no-boundary-model` exactly reproduces v2.2; `--no-team-model` restores v1.10.
+
+## 2026-11-16 improvement round (held)
+
+Leave-one-match-out gate against sm_v2_3 (six matches including Metrica 3;
+natural watch on WMX / Metrica 2 / WR9). Challenge GT unused.
+
+- Boundary blend/scale/gate grid (18 configs): only the v2.3-identical policy
+  passed. Higher blend (0.7) improved suite means but failed natural
+  Sample_Game_2. `missing_only` now isolates Viterbi to missing-ball runs.
+- Missing-weight retrains (2× and 3× on missing frames, seeds 473/573,
+  long-dropout sampling boost) exported to
+  `evaluation/reports/boundary_ownership_mw{2,3}.npz` with NumPy parity
+  ~1e-6. Both lost suite spellF1 and natural watch checks vs v2.3.
+- Cautious dead-confidence gating was not run: missing-frame live/dead errors
+  dominate wrong-team on only 2/6 natural matches.
+
+Ship remains **sm_v2_3** (`LATEST`). Decision summary:
+`evaluation/reports/v24_round_decision.json`.
 
 ## Rejected or held alternatives
 

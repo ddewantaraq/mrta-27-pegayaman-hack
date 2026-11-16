@@ -8,8 +8,10 @@ By default writes the next file after evaluation/results/LATEST (approved best):
   only when that bare name already exists. Pass --out PATH to force a path.
 
 Needs the match bundle in ./data or MTAH_DATA_DIR.
-Defaults = compliant sm_v2_3 (boosted dead-ball + boundary-aware ownership ensemble).
-Rollback: --no-boundary-model -> sm_v2_2; --no-team-model -> sm_v1_10;
+Defaults = compliant sm_v2_3 (boundary ownership ensemble).
+Optional: --error-corrector-file -> sm_v2_4 research stack.
+Rollback: --no-boundary-model -> sm_v2_2;
+--no-team-model -> sm_v1_10;
 --dead-model logistic -> sm_v1_9;
 --no-learned-dead -> sm_v1_8.
 Rollback bridge: --no-dead-bridge. T27 --control-confirm stays off.
@@ -38,7 +40,13 @@ from boosted_dead_model import (  # noqa: E402
 from set_ownership_model import (DEFAULT_SET_OWNERSHIP_PATH, DEFAULT_USE_SET_OWNERSHIP,
                                  DEFAULT_SET_OWNERSHIP_POLICY)
 from residual_ownership_model import DEFAULT_RESIDUAL_MODEL_PATH, DEFAULT_USE_RESIDUAL_OWNERSHIP
-from boundary_ensemble_model import DEFAULT_BOUNDARY_MODEL_PATH,DEFAULT_USE_BOUNDARY_ENSEMBLE
+from boundary_ensemble_model import (
+    DEFAULT_BOUNDARY_MODEL_PATH, DEFAULT_USE_BOUNDARY_ENSEMBLE,
+    DEFAULT_BOUNDARY_BLEND, DEFAULT_BOUNDARY_SCALE, DEFAULT_BOUNDARY_GATE,
+    DEFAULT_BOUNDARY_CONFIDENCE)
+from error_corrector_model import (
+    DEFAULT_CORRECTOR_PATH, DEFAULT_USE_ERROR_CORRECTOR,
+    DEFAULT_CORRECTOR_MARGIN)
 
 from games import GAME  # noqa: E402
 from features import (  # noqa: E402
@@ -125,6 +133,25 @@ def main():
                         help='override NumPy boundary-aware ensemble parameters')
     parser.add_argument('--no-boundary-model',action='store_true',
                         help='disable the boundary ensemble and use the v2.2 ownership head')
+    parser.add_argument('--boundary-blend', type=float, default=DEFAULT_BOUNDARY_BLEND,
+                        help='weight on new boundary head vs v2.2 residual (default 0.5)')
+    parser.add_argument('--boundary-scale', type=float, default=DEFAULT_BOUNDARY_SCALE,
+                        help='scale on boundary logits before transition costs (default 1)')
+    parser.add_argument('--boundary-gate', choices=('none', 'missing_only', 'confidence'),
+                        default=DEFAULT_BOUNDARY_GATE,
+                        help='when to apply boundary Viterbi (default none = sm_v2_3)')
+    parser.add_argument('--boundary-confidence', type=float,
+                        default=DEFAULT_BOUNDARY_CONFIDENCE,
+                        help='|team signal| threshold for confidence gate')
+    parser.add_argument('--dead-confidence', type=float, default=None,
+                        help='only force D when boosted dead probability >= this')
+    parser.add_argument('--error-corrector-file', default=None,
+                        help='enable NumPy live-team error corrector (sm_v2_4 research; off by default)')
+    parser.add_argument('--no-error-corrector', action='store_true',
+                        help='explicitly keep error corrector off (default = sm_v2_3)')
+    parser.add_argument('--error-corrector-margin', type=float,
+                        default=DEFAULT_CORRECTOR_MARGIN,
+                        help='|logit| margin required to flip a live team label')
     parser.add_argument('--team-policy', choices=('full','run90_mean90'),
                         default=DEFAULT_SET_OWNERSHIP_POLICY,
                         help='ownership replacement policy; full is the ungated research candidate')
@@ -328,6 +355,12 @@ def main():
             and DEFAULT_USE_BOUNDARY_ENSEMBLE and not args.no_boundary_model
             and not args.team_model_file and not args.residual_team_model_file):
         boundary_model_path=DEFAULT_BOUNDARY_MODEL_PATH
+    corrector_path = args.error_corrector_file
+    if args.no_error_corrector and corrector_path:
+        parser.error('--no-error-corrector conflicts with --error-corrector-file')
+    if (corrector_path is None and boundary_model_path is not None
+            and DEFAULT_USE_ERROR_CORRECTOR and not args.no_error_corrector):
+        corrector_path = DEFAULT_CORRECTOR_PATH
     team_model_path = args.team_model_file
     if args.no_team_model and team_model_path:
         parser.error('--no-team-model conflicts with --team-model-file')
@@ -452,7 +485,8 @@ def main():
     if method == 'boosted':
         labels = label_with_boosted_model(
             features, model_path=args.boosted_model_file,
-            vc_splice=args.vc_splice, **label_kwargs)
+            vc_splice=args.vc_splice, dead_confidence=args.dead_confidence,
+            **label_kwargs)
     elif method == 'logistic':
         labels = label_with_dead_model(
             features, model_path=args.dead_model_file,
@@ -478,8 +512,18 @@ def main():
     if boundary_model_path:
         from boundary_ensemble_model import apply_boundary_ensemble
         from state_machine import graded_mask
-        labels=apply_boundary_ensemble(features,labels,graded_mask(features['n_frames'],args.game),
-                                       player_nodes,boundary_model_path,minimum=args.min_spell_frames)
+        labels = apply_boundary_ensemble(
+            features, labels, graded_mask(features['n_frames'], args.game),
+            player_nodes, boundary_model_path, minimum=args.min_spell_frames,
+            blend=args.boundary_blend, boundary_scale=args.boundary_scale,
+            gate=args.boundary_gate, confidence_threshold=args.boundary_confidence)
+    if corrector_path:
+        from error_corrector_model import apply_error_corrector
+        from state_machine import graded_mask
+        labels = apply_error_corrector(
+            features, labels, graded_mask(features['n_frames'], args.game),
+            player_nodes, corrector_path, margin=args.error_corrector_margin,
+            minimum=args.min_spell_frames)
     path = write_submission(out_path, labels)
     counts = {lab: int(np.sum(labels == lab)) for lab in ("H", "A", "D", "X")}
     rel = os.path.relpath(path, ROOT).replace(os.sep, "/")

@@ -100,6 +100,7 @@ This fork ships a possession pipeline over tactical ATD.
 **Approved best (`LATEST`):** **`sm_v2_3`** — boosted live/dead + residual ownership + boundary ensemble  
 → `evaluation/results/sm_v2_3_compliant.csv`.  
 Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10.  
+Optional research: `--error-corrector-file` enables the demoted sm_v2_4 stack.  
 We do **not** tune on the public possession ground truth (organiser clarification).
 
 Inference needs only pinned NumPy/pandas and the packaged weights in `starter/models/`.

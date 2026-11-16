@@ -5,6 +5,7 @@ Decision write-ups for the **promoted** ship line (not the day-to-day task board
 | Note | Topic |
 |------|--------|
 | [boundary-ownership-research.md](boundary-ownership-research.md) | **sm_v2_3** boundary ensemble (LATEST) |
+| [push-090-natural.md](push-090-natural.md) | sm_v2_4 error corrector (demoted; research) |
 | [temporal-ownership-research.md](temporal-ownership-research.md) | sm_v2_2 residual ownership |
 | [boosted-dead-ball.md](boosted-dead-ball.md) | sm_v1_10 calibrated boosted live/dead |
 | [learned-dead-ball.md](learned-dead-ball.md) | sm_v1_9 logistic dead-ball |

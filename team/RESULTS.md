@@ -1,5 +1,85 @@
 # Results log
 
+### 2026-11-16: sm_v2_4 demoted — restore sm_v2_3 as LATEST
+
+Track A structure vs sm_v2_3: spells 353 vs 342, mean 8.38 vs 8.65 s, s25 10 vs 8
+(s12 tied at 0; D/X unchanged). Prefer cleaner possession structure on v2.3
+despite earlier crossfit natural / Metrica–Sportec B/C gains from the error
+corrector. `DEFAULT_USE_ERROR_CORRECTOR=False`; opt-in via
+`--error-corrector-file`. `LATEST` → `sm_v2_3_compliant.csv`.
+
+Method note: [push-090-natural](../docs/algorithms/push-090-natural.md).
+
+### 2026-11-16: sm_v2_5 player-node corrector — held (keep then-LATEST sm_v2_4)
+
+Attempted live H↔A fix: top-3-per-team player-node features + hard-mined HGB
+corrector replacing the v2.4 control-design head, with anti-flicker apply
+(margin / ±W window / min_island; nested-tuned per fold). Audit priors from
+`wrong_team_audit.py`: margin=1.5, window=5, min_island=8 (near-turnover
+dominant, ~46% of visible wrong frames within 12f of GT switch).
+
+**Crossfit gate vs sm_v2_4 (10 matches): FAIL**
+- mean natural spellF1 0.7221 < 0.7291
+- mean visible team acc 0.9370 < 0.9413
+- worst spell Δ −0.025 on Sample_Game_1 (limit −0.02)
+
+Track A cand CSV more fragmented than v2.4 (395 spells / mean 7.49s / s25=21
+vs 353 / 8.38 / 10). Not promoted. (Then-LATEST was sm_v2_4; later demoted —
+see above.) Artifacts: `evaluation/reports/crossfit_node_corrector.json`,
+`wrong_team_audit.json`, `node_corrector_v25_decision.json`,
+`research/experiments/node_corrector.py`.
+
+### 2026-11-16: sm_v2_4 live-team error corrector — briefly promoted, then demoted
+
+Cross-fitted push toward 0.90 natural spellF1 / hidden across 10 external
+matches. Ceiling audit: mean noise floor 0.927 (absolute 0.90 label-feasible);
+v2.3 natural mean 0.7205. Visible HGB, missing-weight boundary retrain, dead
+crossfit and HSMM all failed to beat v2.3. A second-stage error corrector
+(control geometry + v2.3 ensemble logits; flip only when disagreeing with
+`|logit| ≥ 1.5`) wins the leave-one-out natural mean **0.7205 → 0.7232**,
+with no match dropping more than 0.02.
+
+- Metrica protocol assess: spellF1 0.6443 → **0.6650**, hidden 0.8014 → 0.8015
+- Sportec Track C: spellF1 0.6161 → **0.6226**, hidden flat 0.8069
+- Track A: 353 spells / mean 8.38 s / s25=10 (v2.3: 342 / 8.65 / 8); D/X unchanged
+- Absolute 0.90 **not** reached (gap ~0.18 natural spellF1). Soft target
+  (90% of ceiling) is 0.834.
+- SHA256 `cd684645899f25b09eac7d54416aa6ed05b8923c86969cdb8a271b0e1b49fa70`.
+  Format OK, 199319 rows. Two regenerations byte-identical.
+  Initially set `LATEST` → `sm_v2_4_compliant.csv`; later demoted on Track A
+  structure (see demotion entry above). Opt-in:
+  `--error-corrector-file starter/models/error_corrector_v1.json`.
+
+Method: [push-090-natural](../docs/algorithms/push-090-natural.md).
+
+### 2026-11-16: sm_v2_4 improvement round — held (keep sm_v2_3)
+
+Attempted three fixes on top of sm_v2_3 under a leave-one-match-out gate
+(suite spellF1/hidden ≥ v2.3 on five eval matches; non-lose on ≥5/6 including
+Metrica 3; natural spellF1 on WMX/Metrica2/WR9 ≥ v2.3; Track B ≫ smooth50).
+No challenge GT used. Merge threshold stayed 18.
+
+1. **Boundary gate / blend ablation** (inference only): blend ∈ {0.3,0.5,0.7},
+   scale ∈ {0.5,1.0}, gate ∈ {none, missing_only, confidence}. Only the
+   v2.3-identical setting (`b0.5_s1.0_none`) passed. Blend 0.7 raised suite
+   spellF1 (~0.601) but failed natural on Sample_Game_2.
+2. **Missing-ball retrain**: new heads with `--missing-weight` 2 and 3
+   (seeds 473/573, long-dropout boost), init from packaged residual npz,
+   exported with NumPy parity ≤1.6e-6. Both failed the gate (suite spell
+   0.5968 / 0.5931 vs v2.3 0.5992; natural regressions).
+3. **Cautious D**: skipped — live/dead errors dominate wrong-team on missing
+   frames in only 2/6 natural matches (Metrica 2/3), not a majority.
+
+**Decision:** do not promote. `LATEST` remains `sm_v2_3_compliant.csv`.
+Assess confirmation vs sm_v2_2 + smooth50: Track B spellF1 0.6443 / hidden
+0.8014 (smooth50 0.3210 / 0.1528); Track C spellF1 0.6161 / hidden 0.8069.
+Artifacts: `evaluation/reports/boundary_gate_ablation.json`,
+`mw2_vs_v23_gate.json`, `mw3_vs_v23_gate.json`, `v24_round_decision.json`,
+`diagnose_v23_baseline.json`. Harness:
+`research/experiments/evaluate_approved.py`, `diagnose_errors.py`.
+CLI knobs for future trials remain on `predict_v1.py`
+(`--boundary-blend/scale/gate`, `--dead-confidence`) with defaults = v2.3.
+
 ### 2026-11-14: sm_v2_3 boundary-aware ownership ensemble — promoted
 
 An ASRF-inspired joint boundary/ownership head is fitted on WOH/WN1/WOY and
@@ -156,7 +236,7 @@ See [experiment and reproduction](../research/docs/live-islands.md).
 
 ### Active baseline (Nov 2026 clarification)
 
-- **Forward path:** … → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** → **`sm_v2_2`** → **`sm_v2_3`** (boundary ownership ensemble). **Approved best:** `evaluation/results/LATEST` → `sm_v2_3_compliant.csv`. Historical public-GT-era bare files are not this compliant line. Research scripts live under [../research/](../research/).
+- **Forward path:** … → **`sm_v1_8`** → **`sm_v1_9`** → **`sm_v1_10`** → **`sm_v2_2`** → **`sm_v2_3`** (boundary ownership ensemble). **Approved best:** `evaluation/results/LATEST` → `sm_v2_3_compliant.csv`. (`sm_v2_4` error corrector demoted.) Historical public-GT-era bare files are not this compliant line. Research scripts live under [../research/](../research/).
 - **Archive:** rows from historical `sm_v1_1`…`sm_v2` (Oct 2026) used public GT as a keep/drop signal — we **do not continue** that process. Auto predict floors on **LATEST**, not max bare archive.
 - **How we assess (not Oct):** three tracks via `assess.sh` — **A** structure (cand vs ref vs smooth50); **B** Metrica H/A; **C** Sportec full-timeline suite (optional `--skip-sportec`). Public scorer: **optional log only**. Keep? cites **challenge rule / ATD physics / licensed external data**. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
@@ -199,6 +279,7 @@ Baselines scored **2026-10-24** (T10). Team models: archive through `sm_v2`, the
 | 2026-11-14 | sm_v1_10_compliant | Codex | — | — | — | — | Prior LATEST; calibrated boosted D; local 294 spells / mean 10.07 / s12 0 / s25 2; original Metrica suite 0.5716 (includes training Game 1); five excluded-match whole-timeline suite 0.4811 |
 | 2026-11-14 | sm_v2_2_compliant | Codex | — | — | — | — | Prior LATEST; residual ownership; local 319 spells / mean 9.28 / s12 0 / s25 13; Metrica suite spellF1 0.6345 / hidden 0.7878 |
 | 2026-11-14 | sm_v2_3_compliant | Codex | — | — | — | — | **LATEST**; boundary ensemble; local 342 spells / mean 8.65 / s12 0 / s25 8; Metrica vs v2.2 spellF1 0.6443 / hidden 0.8014 (both games); SHA256 `597e3ba8…` |
+| 2026-11-16 | sm_v2_4_compliant | Codex | — | — | — | — | Demoted; error corrector on v2.3; local 353 spells / mean 8.38 / s12 0 / s25 10; Metrica spellF1 0.6650 / hidden 0.8015; Sportec 0.6226 / 0.8069; SHA256 `cd684645…` |
 | | | | | | | | |
 
 Add a new blank row for every model CSV (T30). Pipeline metrics in Notes are logs, not keep/drop drivers.
@@ -271,4 +352,6 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-12 | **sm_v1_8** T32 short D-sandwich bridge (≤25f, same H/A) | yes (then superseded) | Tracking flicker ≠ stoppage. Track A + B beat sm_v1_7. Still in stack under later models. Rollback `--no-dead-bridge`. [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md). |
 | 2026-11-14 | **sm_v1_10** calibrated boosted live/dead | yes (then sm_v2_2) | External Sportec+Metrica fit. [../docs/algorithms/boosted-dead-ball.md](../docs/algorithms/boosted-dead-ball.md). |
 | 2026-11-14 | **sm_v2_2** residual ownership | yes (then sm_v2_3) | [../docs/algorithms/temporal-ownership-research.md](../docs/algorithms/temporal-ownership-research.md). |
-| 2026-11-14 | **sm_v2_3** boundary ownership ensemble | **yes (default / LATEST)** | Beats v2.2 on Metrica A+B (reassessed 2026-11-15). Rollback `--no-boundary-model`. [../docs/algorithms/boundary-ownership-research.md](../docs/algorithms/boundary-ownership-research.md). Research archive: [../research/](../research/). |
+| 2026-11-14 | **sm_v2_3** boundary ownership ensemble | **yes (default / LATEST)** | Beats v2.2 on Metrica A+B. Rollback `--no-boundary-model`. [../docs/algorithms/boundary-ownership-research.md](../docs/algorithms/boundary-ownership-research.md). |
+| 2026-11-16 | sm_v2_4 live-team error corrector | **no (demoted)** | Crossfit/B/C up vs v2.3 but Track A s25 8→10 / mean down; restore v2.3. Opt-in `--error-corrector-file`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | sm_v2_5 player-node corrector | **no (held)** | Crossfit spell 0.722 < then-v2.4 0.729; vis acc down; worst Δ −0.025. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |

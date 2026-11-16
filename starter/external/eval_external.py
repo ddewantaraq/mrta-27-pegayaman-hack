@@ -153,13 +153,35 @@ def sm_v1_3_kwargs():
 
 def run_labeller(features, graded, kwargs):
     kw = dict(kwargs)
+    corrector_model = kw.pop('error_corrector_model', None)
+    corrector_margin = kw.pop('error_corrector_margin', None)
     boundary_model=kw.pop('boundary_ensemble_model',None)
     if boundary_model is not None:
         from player_node_data import load_player_nodes
+        from boundary_ensemble_model import (
+            DEFAULT_BOUNDARY_BLEND, DEFAULT_BOUNDARY_SCALE,
+            DEFAULT_BOUNDARY_GATE, DEFAULT_BOUNDARY_CONFIDENCE)
         nodes=load_player_nodes(str(features['game']))
+        blend=kw.pop('boundary_blend', DEFAULT_BOUNDARY_BLEND)
+        boundary_scale=kw.pop('boundary_scale', DEFAULT_BOUNDARY_SCALE)
+        gate=kw.pop('boundary_gate', DEFAULT_BOUNDARY_GATE)
+        confidence=kw.pop('boundary_confidence', DEFAULT_BOUNDARY_CONFIDENCE)
         reference=run_labeller(features,graded,kw)
-        return apply_boundary_ensemble(features,reference,graded,nodes,boundary_model,
-                                        minimum=kw.get('min_spell_frames',DEFAULT_MIN_SPELL_FRAMES))
+        labels = apply_boundary_ensemble(
+            features, reference, graded, nodes, boundary_model,
+            minimum=kw.get('min_spell_frames', DEFAULT_MIN_SPELL_FRAMES),
+            blend=blend, boundary_scale=boundary_scale, gate=gate,
+            confidence_threshold=confidence)
+        if corrector_model is not None:
+            from error_corrector_model import (
+                apply_error_corrector, DEFAULT_CORRECTOR_MARGIN)
+            margin = (DEFAULT_CORRECTOR_MARGIN if corrector_margin is None
+                      else corrector_margin)
+            return apply_error_corrector(
+                features, labels, graded, nodes, corrector_model,
+                margin=margin,
+                minimum=kw.get('min_spell_frames', DEFAULT_MIN_SPELL_FRAMES))
+        return labels
     residual_model = kw.pop('residual_ownership_model',None)
     if residual_model is not None:
         from player_node_data import load_player_nodes
@@ -406,10 +428,13 @@ def evaluate_vc_splice(root):
 
 def kwargs_for_version(major, minor):
     """Metrica kwargs for an approved model version. Extend when promoting."""
-    # Auto-bump after LATEST (e.g. predict_v1.sh → sm_v2_4) shares sm_v2_3 defaults
-    # until a real promote adds a distinct entry.
     if (major, minor) == (2, 4):
-        return kwargs_for_version(2, 3)
+        from error_corrector_model import (
+            DEFAULT_CORRECTOR_PATH, DEFAULT_CORRECTOR_MARGIN)
+        kw = kwargs_for_version(2, 3)
+        kw['error_corrector_model'] = DEFAULT_CORRECTOR_PATH
+        kw['error_corrector_margin'] = DEFAULT_CORRECTOR_MARGIN
+        return kw
     if (major, minor) == (2, 3):
         kw = kwargs_for_version(1, 10)
         kw['boundary_ensemble_model'] = DEFAULT_BOUNDARY_MODEL_PATH

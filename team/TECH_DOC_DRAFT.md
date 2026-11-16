@@ -38,6 +38,12 @@ not the challenge score. Small natural regressions on other matches remain.
 NumPy-only parameters reproduce exactly. See
 [boundary ownership research](../docs/algorithms/boundary-ownership-research.md).
 
+**Tried / demoted — sm_v2_4 (2026-11-16):** second-stage live-team error
+corrector on control geometry + v2.3 ensemble logits. Crossfit natural and
+Metrica/Sportec B/C improved vs v2.3, but Track A structure worsened (s25 8→10,
+shorter mean spells). Demoted; opt-in `--error-corrector-file`. See
+[push-090-natural](../docs/algorithms/push-090-natural.md).
+
 **Previous method — sm_v2_2 (2026-11-14):** a baseline-aware player-set temporal
 network corrects the v1.10 team estimates, retaining its D/X decisions. Inputs
 are geometry-only anonymous player sets, observed-ball context and the
@@ -103,7 +109,7 @@ _Owner: E1 · B lists “dropped”_
 | Metrica sample-data (other games) | yes | Game 1 in fit sets for v1.9+; Game 2 holdout / Track B; not an inference input on BAR-ATH |
 | Sportec Open DFL (other games, CC BY 4.0) | yes | Fit: WOH/WN1/WOY (+ WOH for boosted D); Track C / excluded checks: WMX/WPY/WQQ/WR9 |
 
-**Compliant levers (order):** cluster → soft ST (archived) → missing-ball H/A → half-kickoff → VC splice → D-bridge → learned/boosted D → residual ownership → **boundary ensemble (`sm_v2_3`)** · homography/broadcast deferred. Keep gates = rule citation + Tracks A/B(/C). Old public-floor keep/drop archived.
+**Compliant levers (order):** cluster → soft ST (archived) → missing-ball H/A → half-kickoff → VC splice → D-bridge → learned/boosted D → residual ownership → **boundary ensemble (`sm_v2_3`)** · live-team error corrector tried/demoted (`sm_v2_4`) · homography/broadcast deferred. Keep gates = rule citation + Tracks A/B(/C). Old public-floor keep/drop archived.
 
 Oct 2026 public-GT-tuned variants (archive bare `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative.
 
@@ -230,7 +236,7 @@ bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
 Windows: activate `.venv`, then `predict_v1.bat` / `assess.bat`.
 
 - Output: `evaluation/results/sm_v2_3_compliant.csv` — 199,319 rows, `frame,label`. Gitignored (regenerate locally).
-- Defaults (`sm_v2_3`): boosted live/dead + residual ownership + boundary ensemble (NumPy weights in `starter/models/`). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10.
+- Defaults (`sm_v2_3`): boosted live/dead + residual ownership + boundary ensemble (NumPy weights in `starter/models/`). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. Optional demoted stack: `--error-corrector-file`.
 - Three-track assess: A structure · B Metrica · C Sportec (`--skip-sportec` if `data_external/sportec/` missing).
 - Match `data/` and `data_external/` are **not** in the public repo. Research/training scripts are under [../research/](../research/) and are not required to regenerate the CSV. See `DATA.md`.
 
@@ -255,3 +261,4 @@ Windows: activate `.venv`, then `predict_v1.bat` / `assess.bat`.
 | 2026-11-09 | E1 | sm_v1_7: VC visible + sm_v1_6 missing; dual assess command; docs/algorithms |
 | 2026-11-14 | E1 | sm_v2_3 LATEST; three-track assess (A/B/C); research/ archive for experiments |
 | 2026-11-15 | E2 | Ship docs + folder tidy: `requirements-inference.txt`, research quarantine |
+| 2026-11-16 | E1 | sm_v2_4 briefly LATEST then demoted on Track A; restore sm_v2_3 |

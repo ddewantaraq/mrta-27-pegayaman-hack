@@ -22,6 +22,7 @@ Challenge overview: [../README.md](../README.md) · Assess: [../docs/ASSESS.md](
 
 Inference: `requirements-inference.txt` (NumPy/pandas only).  
 Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10; `--dead-model logistic` → sm_v1_9; `--no-learned-dead` → sm_v1_8.  
+Optional research: `--error-corrector-file` → demoted sm_v2_4 stack.
 
 Method notes: [boundary](../docs/algorithms/boundary-ownership-research.md) · [temporal ownership](../docs/algorithms/temporal-ownership-research.md) · [boosted dead-ball](../docs/algorithms/boosted-dead-ball.md).
 
@@ -99,6 +100,7 @@ Then re-run assess. Use `--skip-metrica` or `--skip-sportec` only if that track�
 source .venv/bin/activate
 bash assess.sh evaluation/results/sm_v2_3_compliant.csv \
   --ref evaluation/results/sm_v2_2_compliant.csv
+# bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
 ```
 
 | Track | What |
@@ -121,6 +123,7 @@ Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · numbers: [RESULTS.md](RESULTS.
 | `--dead-model` | boosted | live/dead base: boosted, logistic (sm_v1_9), or legacy (sm_v1_8) |
 | `--no-team-model` | off | Disable ownership correction → sm_v1_10 |
 | `--no-boundary-model` | off | Restore sm_v2_2 ownership head |
+| `--error-corrector-file` | off | Opt-in demoted sm_v2_4 live-team corrector |
 | `--boundary-team-model-file` | packaged NPZ | Override boundary ensemble weights |
 | `--residual-team-model-file` | packaged NPZ | Override residual ownership weights |
 | `--boosted-model-file` | packaged JSON | Override boosted live/dead weights |
@@ -156,6 +159,6 @@ Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · numbers: [RESULTS.md](RESULTS.
 | Track B fails / no Metrica | Run `fetch_metrica.py` or fill `data_external/metrica/` |
 | Track C fails / no Sportec | Run `fetch_sportec.py` or extract into `data_external/sportec/` |
 | Fetch 403 | Manual download into `data_external/` (table above) |
-| Assess fails on `sm_v2_4` kwargs | Use fixed `--out …/sm_v2_3_compliant.csv`, not auto-bump |
+| Assess fails on auto-bump kwargs | Use fixed `--out …/sm_v2_3_compliant.csv` |
 
 Questions about the official challenge: [FAQ.md](../FAQ.md). Team notes: [RESULTS.md](RESULTS.md).

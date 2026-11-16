@@ -2,6 +2,9 @@
 
 Counterfactual reference-assisted scores below are diagnostics, not achieved
 model scores, deployable models, or challenge predictions.
+
+For multi-match visible/missing breakdowns and D-vs-team dominance, prefer
+`diagnose_errors.py`.
 """
 import argparse
 import json

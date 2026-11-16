@@ -2,7 +2,7 @@
 
 We do **not** keep/drop from the public 5-minute board. Run all tracks when judging a candidate.
 
-**Approved best:** `evaluation/results/LATEST`. Tracks compare **cand vs ref** (default LATEST; pass `--ref` to override). Track A also includes smooth50. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+**Approved best:** `evaluation/results/LATEST` → **`sm_v2_3_compliant.csv`**. Tracks compare **cand vs ref** (default LATEST; pass `--ref` to override). Track A also includes smooth50. Promote by editing `LATEST` only when RESULTS keeps a newer model.
 
 **sm_v2_3:** equal-logit ownership ensemble with a learned turnover-boundary
 head. Five excluded-fit-match suite spellF1 .580146 -> .599177 and hidden
@@ -12,6 +12,11 @@ both metrics in both games (Game 1 is training). Some natural Sportec/Metrica 2
 scores regress slightly; these tradeoffs are recorded explicitly. Challenge
 <25f spells decrease 13 -> 8, with zero <12f. Rollback `--no-boundary-model`.
 See [evidence and reproduction](algorithms/boundary-ownership-research.md).
+
+**sm_v2_4 (demoted):** sm_v2_3 + live-team error corrector. Crossfit natural
+and Metrica/Sportec B/C improved vs v2.3, but Track A structure worsened
+(spells 342→353, mean 8.65→8.38 s, s25 8→10). Opt-in via
+`--error-corrector-file`. See [push-090-natural](algorithms/push-090-natural.md).
 
 **sm_v2_2:** baseline-aware player-set ownership with raw visible estimates and
 temporal decoding during missing-ball stretches. The five excluded-fit-match
@@ -106,6 +111,7 @@ Auto predict writes the **next version after LATEST** (prefer bare `sm_v*.csv`; 
 5. Log model version in [../team/RESULTS.md](../team/RESULTS.md); update `LATEST` only on promote  
 
 `sm_v2_3` (boundary ensemble, **LATEST**): [algorithms/boundary-ownership-research.md](algorithms/boundary-ownership-research.md).  
+`sm_v2_4` (error corrector, demoted): [algorithms/push-090-natural.md](algorithms/push-090-natural.md).  
 `sm_v2_2` / `sm_v1_10` / `sm_v1_8` notes: [algorithms/](algorithms/).  
 Research archive (experiments not needed to regenerate CSV): [../research/](../research/).  
 T27 closed: [algorithms/controlled-possession.md](algorithms/controlled-possession.md).

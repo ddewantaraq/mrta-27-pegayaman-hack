@@ -37,9 +37,10 @@ def predict_dual(features,graded,nodes,reference,p):
     return team,edge
 
 
-def decode_boundary(logits,boundary_logits,live,period=None,stride=5):
+def decode_boundary(logits,boundary_logits,live,period=None,stride=5,boundary_scale=1.):
     n=len(logits); period=np.zeros(n,np.int8) if period is None else period
     result=np.zeros(n,bool); a=0
+    scale=float(boundary_scale)
     while a<n:
         if not live[a]:
             a+=1; continue
@@ -47,7 +48,8 @@ def decode_boundary(logits,boundary_logits,live,period=None,stride=5):
         while b<n and live[b] and period[b]==period[a]:
             b+=1
         ff=np.arange(a,b,stride); signal=logits[ff]
-        probability=1/(1+np.exp(-np.clip(boundary_logits[ff]-np.log(10.),-30,30)))
+        scaled=boundary_logits[ff]*scale
+        probability=1/(1+np.exp(-np.clip(scaled-np.log(10.),-30,30)))
         probability=np.clip(probability,.001,.3)
         emissions=np.column_stack([-np.logaddexp(0.,signal),-np.logaddexp(0.,-signal)])
         scores=emissions[0].copy(); back=np.zeros((len(ff),2),np.int8)

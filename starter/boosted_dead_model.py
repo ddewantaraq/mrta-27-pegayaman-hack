@@ -25,13 +25,19 @@ def label_with_boosted_model(features, graded=None, model_path=DEFAULT_BOOSTED_M
         raise ValueError('Boosted dead-ball inference requires ball-independent player_motion')
     kw = dict(kwargs)
     use_splice = kw.pop('vc_splice', True)
+    dead_confidence = kw.pop('dead_confidence', None)
     if graded is None:
         graded = graded_mask(int(features['n_frames']), kw.get('game', GAME))
     graded = np.asarray(graded, bool)
     kw['use_geometric_dead'] = False
     runner = splice_vc_on_visible if use_splice else label_possession
     labels = runner(features, graded=graded, **kw)
-    dead = predict_boosted_dead(features, load_boosted_model(model_path), graded)
+    model = load_boosted_model(model_path)
+    dead = predict_boosted_dead(features, model, graded)
+    if dead_confidence is not None:
+        logits = boosted_logits(design_motion_features(features), model)
+        prob = 1.0 / (1.0 + np.exp(-np.clip(logits, -30, 30)))
+        dead = dead & (prob >= float(dead_confidence))
     labels[dead & graded] = 'D'
     if postprocess:
         if kw.get('use_dead_bridge', DEFAULT_USE_DEAD_BRIDGE):
