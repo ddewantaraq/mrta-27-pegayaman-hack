@@ -77,7 +77,7 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T90 | Broadcast sync / video CNN | — | — | done (closed) | after freeze | Explored after freeze: FootAndBall + ROI-gate smokes killed on domain shift under frozen boundaries; YOLO fine-tune (v3) is a separate future commission, not part of the final ship | T42 |
+| T90 | Broadcast sync / video CNN | — | — | done (closed) | after freeze | Explored after freeze: FootAndBall + ROI-gate smokes killed on domain shift under frozen boundaries; YOLO fine-tune v3 cancelled by team decision; not part of the final ship | T42 |
 
 ---
 

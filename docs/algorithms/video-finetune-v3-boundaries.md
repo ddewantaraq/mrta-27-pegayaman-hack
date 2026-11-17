@@ -16,3 +16,6 @@
   disagreement > 2 m (gated) or zero gated detections.
 - Aggregates only; no changes after output is seen; all v1/v2
   boundaries remain in force.
+
+**Status: CANCELLED by team decision (2026-11-17) before any result.
+No weights were produced or evaluated from this line.**
