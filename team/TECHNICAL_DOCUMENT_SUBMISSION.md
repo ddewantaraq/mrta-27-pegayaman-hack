@@ -3,7 +3,7 @@
 
 **Team:** Pegayaman Hack
 **Selected submission model:** `sm_v2_7_compliant.csv` (approved `LATEST`, accepted as final 17 November 2026; SHA256 `017b9546…`)
-**Status:** Final technical document for submission. Covers exactly the six items required by `SUBMISSION.md` §3.
+**Status:** Final technical document for submission. Covers exactly the six items required by `SUBMISSION.md` section 3.
 
 ### 1. Approach and rationale
 
@@ -83,4 +83,4 @@ The validator confirms the format and 199,319 rows. The default predict reproduc
 - `docs/algorithms/controlled-possession.md`, `docs/algorithms/dead-bridge.md`
 - External data sources: Metrica Sports sample-data repository; Sportec Open DFL (figshare DOI 10.6084/m9.figshare.28196177.v1, CC BY 4.0, Bassek et al. 2025); SkillCorner Open Data (MIT, © SkillCorner, distributed with PySport, pinned commit with sha256 manifest)
 
-**Submission checklist:** Team name confirmed (Pegayaman Hack); training datasets/annotators/counts verified in §3; final asset usage and active rules confirmed in §2/§4; validate the exact CSV submitted; name the final `.pdf` after the registered team. Submission deadline: **17 November 2026**.
+**Submission checklist:** Team name confirmed (Pegayaman Hack); training datasets/annotators/counts verified in Section 3; final asset usage and active rules confirmed in Sections 2 and 4; validate the exact CSV submitted; name the final `.pdf` after the registered team. Submission deadline: **17 November 2026**.
