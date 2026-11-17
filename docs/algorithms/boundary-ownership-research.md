@@ -1,7 +1,9 @@
 # Research beyond sm_v2_2
 
-Status: boundary ensemble `sm_v2_3` is promoted and named in `LATEST`.
-(`sm_v2_4` error corrector was briefly promoted then demoted on Track A.)
+Status: boundary ensemble `sm_v2_3` was promoted on this rung and remains in the
+ship stack. Current `LATEST` is **`sm_v2_7`** (event-first on top of the honest
+corrector); see [push-090-natural](push-090-natural.md).
+(`sm_v2_4` / `sm_v2_5` correctors were demoted.)
 No challenge possession
 reference or public score is used for fitting, selection or these experiments.
 
@@ -124,8 +126,8 @@ natural watch on WMX / Metrica 2 / WR9). Challenge GT unused.
 - Cautious dead-confidence gating was not run: missing-frame live/dead errors
   dominate wrong-team on only 2/6 natural matches.
 
-Ship remains **sm_v2_3** (`LATEST`). Decision summary:
-`evaluation/reports/v24_round_decision.json`.
+This note’s ship decision was **sm_v2_3**; current `LATEST` is **sm_v2_7**.
+Decision summary for the held v2.4 round: `evaluation/reports/v24_round_decision.json`.
 
 ## Rejected or held alternatives
 

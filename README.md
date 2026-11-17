@@ -97,10 +97,10 @@ It takes two seconds and it is the single most common way a good entry scores no
 ## Our team model (reproduce)
 
 This fork ships a possession pipeline over tactical ATD.
-**Approved best (`LATEST`):** **`sm_v2_3`** — boosted live/dead + residual ownership + boundary ensemble  
-→ `evaluation/results/sm_v2_3_compliant.csv`.  
-Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10.  
-Optional research: `--error-corrector-file` enables the demoted sm_v2_4 stack.  
+**Approved best (`LATEST`):** **`sm_v2_7`** — boosted live/dead + residual ownership + boundary ensemble
++ fit-only live-team corrector + event-first touch model  
+→ `evaluation/results/sm_v2_7_compliant.csv`.  
+Rollbacks: `--no-event-first` → sm_v2_6; `--no-error-corrector` → sm_v2_3; `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10.  
 We do **not** tune on the public possession ground truth (organiser clarification).
 
 Inference needs only pinned NumPy/pandas and the packaged weights in `starter/models/`.
@@ -118,17 +118,17 @@ Enrolment / download: [More than A Hack 2027](https://landing.mobileworldcapital
 ### 2. Regenerate the submission CSV (no manual model choices)
 
 ```bash
-python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv
-python evaluation/validate_submission.py evaluation/results/sm_v2_3_compliant.csv
+python starter/predict_v1.py --out evaluation/results/sm_v2_7_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v2_7_compliant.csv
 ```
 
 Use a **fixed `--out`** path for the approved artifact. Prefer this over `predict_v1.sh`, which auto-bumps the filename after `LATEST` and is for experiments, not ship.
 
 Windows: same commands with `.venv` activated (`python` from that venv).
 
-### 3. External data for assess Tracks B + C (optional for CSV only)
+### 3. External data for assess Tracks B + C + D (optional for CSV only)
 
-Predict does **not** need Metrica/Sportec. Assess Track B (Metrica) and Track C (Sportec) do. Both land under gitignored `data_external/`.
+Predict does **not** need Metrica/Sportec/SkillCorner; the trained weights are in `starter/models/`. Assess Track B (Metrica), Track C (Sportec) and Track D (SkillCorner) do. All land under gitignored `data_external/` and are never committed or redistributed.
 
 **Preferred — run the fetch scripts:**
 
@@ -136,10 +136,14 @@ Predict does **not** need Metrica/Sportec. Assess Track B (Metrica) and Track C 
 python starter/external/fetch_metrica.py
 python starter/external/fetch_sportec.py --matches J03WMX J03WPY J03WQQ J03WR9
 # or: python starter/external/fetch_sportec.py --matches all
+python starter/external/fetch_skillcorner.py
 ```
 
 - Metrica → `data_external/metrica/` ([sample-data](https://github.com/metrica-sports/sample-data))  
-- Sportec → `data_external/sportec/` ([figshare v1](https://doi.org/10.6084/m9.figshare.28196177.v1), CC BY 4.0)
+- Sportec → `data_external/sportec/` ([figshare v1](https://doi.org/10.6084/m9.figshare.28196177.v1), CC BY 4.0)  
+- SkillCorner → `data_external/skillcorner/` ([SkillCorner Open Data](https://github.com/SkillCorner/opendata), MIT licence, © SkillCorner, distributed with PySport). Pinned to commit `4340d274572876239c154c90bc507a9b3250a656`; all 20 matches (80 files) are verified against sha256 hashes in `starter/external/skillcorner_manifest.json`.
+
+**SkillCorner use.** Broadcast tracking at 10 fps, resampled to 25 fps (linear within a period; nearest-frame for labels). Team labels H/A come from SkillCorner's own `possession.group` field; frames without a group (~45%) are treated as unlabelled and ignored, never guessed. A deterministic split (lowest four sha256 of the match id, `starter/external/skillcorner_split.json`) reserves SC_1953632, SC_2006229, SC_2007448 and SC_2013725 as Track D hold-out; the other 16 train the sm_v2_7 event-first model. A label-agreement check against sm_v2_6 (`research/experiments/skillcorner_label_check.py`) found team agreement 0.83 on live frames and no systematic frame offset. No BAR-ATH data or ground truth is used for training or tuning.
 
 **If fetch hits 403 / network errors:** download manually, then place files so the same folders look like a successful fetch:
 
@@ -150,16 +154,18 @@ python starter/external/fetch_sportec.py --matches J03WMX J03WPY J03WQQ J03WR9
 
 Then re-run assess. `--skip-metrica` / `--skip-sportec` skip a track if that data is still missing.
 
-### 4. Assess (Tracks A + B + C)
+### 4. Assess (Tracks A + B + C + D)
 
 ```bash
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv \
-  --ref evaluation/results/sm_v2_2_compliant.csv
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv \
+  --ref evaluation/results/sm_v2_6_compliant.csv --skillcorner
 ```
 
 - **A** — BAR-ATH structure vs ref + `baseline_smooth50`  
 - **B** — Metrica spellF1 + hidden team accuracy  
 - **C** — Sportec full-timeline suite (excluded-fit matches)  
+- **D** — SkillCorner hold-out (`--skillcorner`)  
+- Leakage check — fails if any model trained on a Track B/C/D match (legacy Metrica Game 1 is flagged in-sample)  
 
 Detail: [docs/ASSESS.md](docs/ASSESS.md) · team how-to: [team/README.md](team/README.md).
 
@@ -208,16 +214,17 @@ evaluation/
   gt/                       the public 5-minute ground truth
   results/                  baselines + LATEST pointer; regenerate sm_v*.csv locally
 starter/
-  predict_v1.py             team submission pipeline (defaults = sm_v2_3)
-  models/                   packaged NumPy weights for sm_v2_3 inference
+  predict_v1.py             team submission pipeline (defaults = sm_v2_7)
+  models/                   packaged NumPy weights for sm_v2_7 inference
   external/fetch_metrica.py download Metrica sample games → data_external/metrica/
   external/fetch_sportec.py download Sportec Open DFL → data_external/sportec/
+  external/fetch_skillcorner.py download SkillCorner Open Data → data_external/skillcorner/
   baseline.py               the reference baseline, numpy only
   …                         loaders, notebooks, state machine
-assess.sh                   Tracks A (structure) + B (Metrica) + C (Sportec)
+assess.sh                   Tracks A (structure) + B (Metrica) + C (Sportec) + D (SkillCorner)
 research/                   archived training/experiments (not needed to regenerate CSV)
 data/                       unpack the challenge match assets here
-data_external/              Metrica + Sportec for assess (gitignored; use fetch_*.py)
+data_external/              Metrica + Sportec + SkillCorner (gitignored; use fetch_*.py)
 ```
 
 The scorer you run locally is the scorer that decides the competition. If it scores on your

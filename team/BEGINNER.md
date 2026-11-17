@@ -21,20 +21,21 @@ Mark **T01** done when that works. Note your Python version in [RESULTS.md](RESU
 
 **Clarification:** do not ask E1 to keep a change because the public scoreboard improved. Your job is log + validate, not GT tuning. See [TEAM.md](TEAM.md).
 
-**Current approved CSV:** `evaluation/results/sm_v2_3_compliant.csv` (`LATEST`).
+**Current approved CSV:** `evaluation/results/sm_v2_7_compliant.csv` (`LATEST`).
 
 ---
 
 ## Commands you will use often
 
-### Three-track assess (keep ritual — preferred)
+### Four-track assess (keep ritual — preferred)
 
 ```bash
 source .venv/bin/activate
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv --skip-sportec
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --ref evaluation/results/sm_v2_6_compliant.csv --skillcorner
+# until SkillCorner/Sportec are fetched: omit --skillcorner and/or add --skip-sportec
 ```
 
-Track A = structure vs ref + smooth50; Track B = Metrica H/A; Track C = Sportec (omit with `--skip-sportec` until data is fetched). See [../docs/ASSESS.md](../docs/ASSESS.md).
+Track A = structure vs ref + smooth50; Track B = Metrica H/A; Track C = Sportec; Track D = SkillCorner hold-out. See [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ### Optional public board log (not a keep gate)
 

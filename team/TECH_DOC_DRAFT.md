@@ -17,7 +17,7 @@ _Owner: B · Reviewer: E1_ — **T13r signed off 2026-10-24**
 - **macroF1** (tie-break / per-frame): Mean of the per-class F1 scores for `H`, `A`, and `D` on every graded frame. Measures “right letter, right frame.” Useful diagnostic; reported beside spellF1 and breaks ties only.
 - **Organiser clarification (Nov 2026):** parameters must **not** be trained, fitted, or calibrated on the possession ground truth or the provided video. The public 5-minute GT is for **pipeline verification** only (file shape, scorer runs). We set knobs from challenge rules / ATD physics (or licensed external data), not from public spellF1 keep/drop.
 - Why public spellF1 alone was always a weak private proxy: smooth125 can lead the public window while losing on the full match (published floor smooth50 spellF1 **0.2433**). That is a second reason not to chase the public board — the first is the clarification itself.
-- **How we assess (vs Oct public-GT keep/drop):** three tracks via `assess.sh` — local structure vs prior + `baseline_smooth50.csv`; Metrica H/A; Sportec full-timeline suite (Track C; `--skip-sportec` if data missing). Public board = optional log only. Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
+- **How we assess (vs Oct public-GT keep/drop):** four tracks via `assess.sh` — local structure vs prior + `baseline_smooth50.csv`; Metrica H/A; Sportec full-timeline suite (Track C; `--skip-sportec` if data missing); SkillCorner hold-out (Track D, `--skillcorner`). A leakage check fails any model whose training matches overlap an evaluation track. Public board = optional log only. Detail: [../docs/ASSESS.md](../docs/ASSESS.md) · [TEAM.md](TEAM.md).
 
 Illustration (pipeline sanity, T10): raw invents far more possessions than a coach would count → structure matters more than frame accuracy.
 
@@ -25,7 +25,19 @@ Illustration (pipeline sanity, T10): raw invents far more possessions than a coa
 
 ## 1. Approach and why
 
-**Current method — sm_v2_3 (2026-11-14):** a joint ownership/boundary network
+**Current method — sm_v2_7 (2026-11-16):** sm_v2_3, then a live-team error
+corrector trained on the fit matches only (sm_v2_6), then an event-first touch
+model. Ball touch candidates (turn ≥ 25° or speed jump ≥ 2 m/s with a player
+within 1.5 m) are classified home/away by NumPy-exported boosted trees, decoded
+with a two-state Viterbi, and allowed to rewrite visible frames only where they
+disagree with sm_v2_6 at |logit| ≥ 1.0. Trained on external Sportec
+WOH/WN1/WOY, Metrica Game 3 and 16 SkillCorner Open Data matches; no BAR-ATH
+data or GT. Pareto vs sm_v2_6 on Tracks A/B/C/D (Metrica 0.6474 → 0.6654,
+Sportec 0.6187 → 0.6218, SkillCorner hold-out 0.4365 → 0.4381; Track A spells
+342 → 339, s25 8 → 7). sm_v2_5 was demoted because its corrector was trained on
+evaluation matches. See [push-090-natural](../docs/algorithms/push-090-natural.md).
+
+**Previous method — sm_v2_3 (2026-11-14):** a joint ownership/boundary network
 is equally ensembled with v2.2 logits. Geometry-only inputs and external-only
 fitting remain unchanged. Raw ensemble signs apply when the ball is observed;
 learned boundary-dependent transition costs decode missing-ball ownership.
@@ -89,9 +101,9 @@ _Owner: B (structure) · E1 (method)_
 
 What we built, and why that rather than something else.
 
-- Pipeline overview (tactical ATD → features → state machine → CSV): … _(Week 2+)_
+- Pipeline overview (tactical ATD → features → state machine → CSV): tactical ATD → `features.py` (ball + nearest/cluster geometry) → boosted live/dead → residual ownership → boundary ensemble → fit-only error corrector → event-first touch model → `predict_v1.py` writes the 199,319-row CSV; NumPy-only inference from packaged weights.
 - Why optimize for possession spells (spellF1), not frame accuracy: see section 0.
-- What we deliberately did **not** build (e.g. broadcast sync, video CNN): … _(Week 2+)_
+- What we deliberately did **not** build (e.g. broadcast sync, video CNN): broadcast sync (separate unsynchronised timeline) and a shipped video detector — FootAndBall/ROI-gate smokes were run as research under frozen boundaries and killed on domain shift (median disagreement 39.6 m); homography is loaded for debugging only, never an inference input. Final ship is tracking-only `sm_v2_7`.
 
 ---
 
@@ -108,12 +120,13 @@ _Owner: E1 · B lists “dropped”_
 | Broadcast (all) | no | Deferred / T90; separate timeline |
 | Metrica sample-data (other games) | yes | Game 1 in fit sets for v1.9+; Game 2 holdout / Track B; not an inference input on BAR-ATH |
 | Sportec Open DFL (other games, CC BY 4.0) | yes | Fit: WOH/WN1/WOY (+ WOH for boosted D); Track C / excluded checks: WMX/WPY/WQQ/WR9 |
+| SkillCorner Open Data (other games, MIT) | yes | 16 matches train the sm_v2_7 event-first model; 4 hold-out matches are Track D. Labels from SkillCorner `possession.group`; frames without a group ignored |
 
-**Compliant levers (order):** cluster → soft ST (archived) → missing-ball H/A → half-kickoff → VC splice → D-bridge → learned/boosted D → residual ownership → **boundary ensemble (`sm_v2_3`)** · live-team error corrector tried/demoted (`sm_v2_4`) · homography/broadcast deferred. Keep gates = rule citation + Tracks A/B(/C). Old public-floor keep/drop archived.
+**Compliant levers (order):** cluster → soft ST (archived) → missing-ball H/A → half-kickoff → VC splice → D-bridge → learned/boosted D → residual ownership → boundary ensemble (`sm_v2_3`) → fit-only error corrector (`sm_v2_6`) → **event-first touch model (`sm_v2_7`)** · margin-1.5/3.0 correctors demoted (`sm_v2_4`, `sm_v2_5`) · homography/broadcast deferred. Keep gates = rule citation + Tracks A/B(/C). Old public-floor keep/drop archived.
 
 Oct 2026 public-GT-tuned variants (archive bare `sm_v1_3`…`sm_v2`) are **not** the submitted method narrative.
 
-**External data acknowledgement:** [Metrica Sports sample-data](https://github.com/metrica-sports/sample-data); Sportec Open DFL CC BY 4.0 (Bassek et al. 2025). Other matches only — not the challenge match. Packaged NumPy weights in `starter/models/` are fit on those external games.
+**External data acknowledgement:** [Metrica Sports sample-data](https://github.com/metrica-sports/sample-data); Sportec Open DFL CC BY 4.0 (Bassek et al. 2025); [SkillCorner Open Data](https://github.com/SkillCorner/opendata) (MIT, © SkillCorner, with PySport), pinned to commit `4340d274572876239c154c90bc507a9b3250a656` and sha256-verified by `starter/external/fetch_skillcorner.py`. SkillCorner is broadcast tracking at 10 fps; we resample it to 25 fps and score/train only on frames where SkillCorner assigns a possession group. Data is downloaded by script into git-ignored `data_external/` and never redistributed. Other matches only — not the challenge match. Packaged NumPy weights in `starter/models/` are fit on those external games.
 
 ---
 
@@ -178,7 +191,7 @@ Features (tactical ATD): ball present, position, nearest team and distance (m), 
 - One short-spell merge on the joined row.
 - Chosen on Metrica against `sm_v1_5`: spellF1 0.370→0.429 and hidden-frame team accuracy 0.510→0.512, both games. Plain VC on all frames (including missing) lost hidden-frame accuracy and is not the default. Rollback → `sm_v1_6`. Detail: [../docs/algorithms/vidal-codina.md](../docs/algorithms/vidal-codina.md).
 
-One command: `predict_v1.sh` / `.bat` (predict → validate → **assess**). Fixed artifact: `python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv`. Re-assess: `bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec`. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md).
+One command: `predict_v1.sh` / `.bat` (predict → validate → **assess**). Fixed artifact: `python starter/predict_v1.py --out evaluation/results/sm_v2_7_compliant.csv`. Re-assess: `bash assess.sh evaluation/results/sm_v2_7_compliant.csv --skillcorner`. Ritual: [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ### External validation (missing-ball H/A)
 
@@ -223,21 +236,21 @@ _Owner: B + E1_
 _Owner: E2_
 
 Someone with the data bundle and our public repo must regenerate a submission that matches our
-**compliant defaults** (`sm_v2_3`). Step-by-step: **[../README.md](../README.md)** · assess: [../docs/ASSESS.md](../docs/ASSESS.md).
+**compliant defaults** (`sm_v2_7`). Step-by-step: **[../README.md](../README.md)** · assess: [../docs/ASSESS.md](../docs/ASSESS.md).
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements-inference.txt
-python starter/predict_v1.py --out evaluation/results/sm_v2_3_compliant.csv
-python evaluation/validate_submission.py evaluation/results/sm_v2_3_compliant.csv
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
+python starter/predict_v1.py --out evaluation/results/sm_v2_7_compliant.csv
+python evaluation/validate_submission.py evaluation/results/sm_v2_7_compliant.csv
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --skillcorner
 ```
 
 Windows: activate `.venv`, then `predict_v1.bat` / `assess.bat`.
 
-- Output: `evaluation/results/sm_v2_3_compliant.csv` — 199,319 rows, `frame,label`. Gitignored (regenerate locally).
-- Defaults (`sm_v2_3`): boosted live/dead + residual ownership + boundary ensemble (NumPy weights in `starter/models/`). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. Optional demoted stack: `--error-corrector-file`.
-- Three-track assess: A structure · B Metrica · C Sportec (`--skip-sportec` if `data_external/sportec/` missing).
+- Output: `evaluation/results/sm_v2_7_compliant.csv` — 199,319 rows, `frame,label`, SHA256 `017b9546…`. Gitignored (regenerate locally); default predict reproduces it byte-for-byte.
+- Defaults (`sm_v2_7`): boosted live/dead + residual ownership + boundary ensemble + fit-only error corrector + event-first touch model (NumPy weights in `starter/models/`). Rollbacks: `--no-event-first` → sm_v2_6; `--no-error-corrector` → sm_v2_3; `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10.
+- Four-track assess: A structure · B Metrica · C Sportec · D SkillCorner (`--skip-sportec` / omit `--skillcorner` if data missing).
 - Match `data/` and `data_external/` are **not** in the public repo. Research/training scripts are under [../research/](../research/) and are not required to regenerate the CSV. See `DATA.md`.
 
 ---
@@ -262,3 +275,4 @@ Windows: activate `.venv`, then `predict_v1.bat` / `assess.bat`.
 | 2026-11-14 | E1 | sm_v2_3 LATEST; three-track assess (A/B/C); research/ archive for experiments |
 | 2026-11-15 | E2 | Ship docs + folder tidy: `requirements-inference.txt`, research quarantine |
 | 2026-11-16 | E1 | sm_v2_4 briefly LATEST then demoted on Track A; restore sm_v2_3 |
+| 2026-11-16 | E1 | Leakage guard; sm_v2_5 demoted; sm_v2_6 fit-only corrector; SkillCorner Track D; sm_v2_7 event-first LATEST |

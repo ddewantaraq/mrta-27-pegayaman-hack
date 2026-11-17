@@ -69,6 +69,10 @@ def load_external_motion(game):
             return data['motion'].copy()
     if game.startswith('Sample_Game_'):
         motion = metrica_motion(game)
+    elif game.startswith('SC_'):
+        from skillcorner_features import skillcorner_geometry
+        xy, _, period = skillcorner_geometry(game)
+        motion = summarize_motion(xy, period)
     else:
         from sportec_features import extract_sportec
         features, _, _ = extract_sportec(game, include_motion=True)

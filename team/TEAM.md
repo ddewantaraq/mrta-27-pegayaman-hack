@@ -11,7 +11,7 @@ Produce a validated `frame,label` CSV (199,319 rows: `H` / `A` / `D` / `X`) that
 
 Technical direction: tactical ATD → possession state machine → CSV. Optimize for **possession structure** (what private spellF1 rewards), not per-frame accuracy.
 
-**Active model line:** compliant **`sm_v2_3`** (`evaluation/results/LATEST` → `sm_v2_3_compliant.csv` = boosted live/dead + residual ownership + boundary ensemble). Rollbacks: `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. T27 closed not promoted. `sm_v2_4` error corrector demoted (Track A). Oct `sm_v1_1`…`sm_v2` archive only. Research/training scripts: [../research/](../research/).
+**Active model line:** compliant **`sm_v2_7`** (`evaluation/results/LATEST` → `sm_v2_7_compliant.csv` = boosted live/dead + residual ownership + boundary ensemble + fit-only error corrector + event-first touch model). Rollbacks: `--no-event-first` → sm_v2_6; `--no-error-corrector` → sm_v2_3; `--no-boundary-model` → sm_v2_2; `--no-team-model` → sm_v1_10. T27 closed not promoted. `sm_v2_4` (Track A) and `sm_v2_5` (leaky corrector) demoted. Oct `sm_v1_1`…`sm_v2` archive only. Research/training scripts: [../research/](../research/).
 
 **Compliant levers completed** (rule/physics / external-data citations; no public-floor keep/drop):
 
@@ -23,8 +23,9 @@ Technical direction: tactical ATD → possession state machine → CSV. Optimize
 6. ~~Pass-like / control-confirm~~ — **closed not promoted** (T27).
 7. ~~Short same-team D-sandwich bridge~~ — **done** (`sm_v1_8`).
 8. ~~Learned / boosted live-dead + ownership heads~~ — **done** (`sm_v1_9`…`sm_v2_3`).
-9. ~~Live-team error corrector~~ — **tried / demoted** (`sm_v2_4`; opt-in research).
-10. **Homography / broadcast** — deferred (T90).
+9. ~~Live-team error corrector~~ — **done** (`sm_v2_6` fit-only; `sm_v2_4`/`sm_v2_5` demoted).
+10. ~~Event-first touch model (+ SkillCorner)~~ — **done** (`sm_v2_7`).
+11. **Homography / broadcast** — deferred (T90).
 
 Old A/B with public floors + GT duration bands is **archived** — do not revive.
 
@@ -95,7 +96,9 @@ Keep/drop using **rule/physics citation** — not public spellF1.
 1. **Track A — structure:** vs prior compliant CSV + `baseline_smooth50.csv`: short H/A &lt;12f/&lt;25f, n_spells, mean duration, graded X/D.
 2. **Track B — H/A:** Metrica Sample_Game_1/2 + dropouts; external spellF1 (same `possession_metrics` as the challenge) + hidden-frame team accuracy. Team/missing-ball changes must beat the reference on both, both games.
 3. **Track C — Sportec:** excluded-fit matches under the full-timeline dropout suite (`--skip-sportec` if data not fetched).
-4. **Public scorer** → optional `--public-log` only. Never the keep driver.
+4. **Track D — SkillCorner:** hold-out matches (`--skillcorner`); H/A frames only.
+5. **Leakage check** must pass without `--allow-leakage`.
+6. **Public scorer** → optional `--public-log` only. Never the keep driver.
 
 Algorithm notes: [../docs/algorithms/](../docs/algorithms/). Oct public-GT keep/drop is archived. See [RESULTS.md](RESULTS.md).
 

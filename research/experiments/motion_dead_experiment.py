@@ -37,6 +37,9 @@ def dataset(game):
         f = cached_features(game)
         truth = build_metrica_gt(game, f['n_frames'], root=DEFAULT_OUT)
         graded = np.ones(f['n_frames'], bool)
+    elif game.startswith('SC_'):
+        from skillcorner_features import cached_skillcorner
+        f, truth, graded = cached_skillcorner(game)
     else:
         f, truth, graded = cached_sportec(game)
     if 'player_motion' not in f:

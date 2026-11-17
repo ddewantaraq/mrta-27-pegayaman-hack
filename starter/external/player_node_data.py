@@ -50,6 +50,14 @@ def sportec_nodes(game,stride=5):
     return pack_player_nodes(xy_all, teams, period,stride=stride)
 
 
+def skillcorner_nodes(game, stride=5):
+    from skillcorner_features import read_source, resample
+    r = resample(read_source(game))
+    length, width = r['pitch']
+    return pack_player_nodes(r['xy'], r['teams'], r['period'], stride=stride,
+                             length=length, width=width)
+
+
 def metrica_nodes(game, return_raw=False,stride=5):
     from metrica_features import _read_tracking_csv, _parse_player_columns
     from fetch_metrica import game_paths, DEFAULT_OUT
@@ -87,6 +95,8 @@ def load_player_nodes(game,stride=5):
             sys.path.insert(0, str(research_exp))
         from metrica3_geometry import geometry
         _, _, nodes = geometry(return_nodes=True, node_stride=stride)
+    elif game.startswith('SC_'):
+        nodes = skillcorner_nodes(game, stride=stride)
     else:
         nodes = metrica_nodes(game, stride=stride) if game.startswith('Sample_Game_') else sportec_nodes(game, stride=stride)
     path.parent.mkdir(parents=True, exist_ok=True)

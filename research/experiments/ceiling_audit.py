@@ -58,11 +58,16 @@ def perfect_visible_team(pred, gt, present):
     return out
 
 
-def audit_match(game):
+def parse_version(text):
+    major, minor = text.split('.')
+    return int(major), int(minor)
+
+
+def audit_match(game, version=(2, 5)):
     data = load_match(game)
     f, gt, graded = data['features'], data['gt'], data['graded']
     present = np.asarray(f['ball_present'], bool)
-    pred = predict_version(f, graded, (2, 3))
+    pred = predict_version(f, graded, version)
     hide = ~present
     valid = graded & (gt != 'X')
 
@@ -105,12 +110,15 @@ def audit_match(game):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--matches', nargs='+', default=MATCHES)
+    parser.add_argument('--version', default='2.5',
+                        help='labeller version major.minor (default 2.5)')
     parser.add_argument('--out', default=str(REPORTS / 'ceiling_audit.json'))
     args = parser.parse_args()
+    version = parse_version(args.version)
     rows = []
     for game in args.matches:
-        print('audit', game, flush=True)
-        row = audit_match(game)
+        print('audit', game, 'v{}.{}'.format(*version), flush=True)
+        row = audit_match(game, version=version)
         rows.append(row)
         print(' ', game, 'actual', round(row['oracles']['actual']['spell_f1_mean'], 4),
               'perfect_both', round(row['oracles']['perfect_both']['spell_f1_mean'], 4),
@@ -120,6 +128,7 @@ def main():
     reachables = [r['reachable_90pct_of_ceiling'] for r in rows]
     actuals = [r['oracles']['actual']['spell_f1_mean'] for r in rows]
     summary = dict(
+        version='{}.{}'.format(*version),
         n_matches=len(rows),
         mean_actual_spell_f1=float(np.mean(actuals)),
         mean_ceiling_spell_f1=float(np.mean(ceilings)),
@@ -132,9 +141,9 @@ def main():
     )
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(summary, indent=2))
-    note = REPORTS / 'ceiling_audit_note.md'
+    note = Path(args.out).with_name(Path(args.out).stem + '_note.md')
     lines = [
-        '# Ceiling audit (natural tracking)',
+        '# Ceiling audit (natural tracking, sm_v{}.{})'.format(*version),
         '',
         'Mean actual spellF1: {:.4f}'.format(summary['mean_actual_spell_f1']),
         'Mean ceiling spellF1: {:.4f}'.format(summary['mean_ceiling_spell_f1']),
@@ -152,7 +161,7 @@ def main():
             r['ceiling_spell_f1'], r['reachable_90pct_of_ceiling']))
     note.write_text('\n'.join(lines) + '\n')
     print(json.dumps({k: summary[k] for k in (
-        'mean_actual_spell_f1', 'mean_ceiling_spell_f1',
+        'version', 'mean_actual_spell_f1', 'mean_ceiling_spell_f1',
         'mean_reachable_90pct', 'absolute_0_90_feasible_all')}, indent=2))
 
 

@@ -1,8 +1,29 @@
-# How we assess (three tracks)
+# How we assess (four tracks + leakage check)
 
 We do **not** keep/drop from the public 5-minute board. Run all tracks when judging a candidate.
 
-**Approved best:** `evaluation/results/LATEST` → **`sm_v2_3_compliant.csv`**. Tracks compare **cand vs ref** (default LATEST; pass `--ref` to override). Track A also includes smooth50. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+**Approved best:** `evaluation/results/LATEST` → **`sm_v2_7_compliant.csv`**. Tracks compare **cand vs ref** (default LATEST; pass `--ref` to override). Track A also includes smooth50. Promote by editing `LATEST` only when RESULTS keeps a newer model.
+
+**sm_v2_7:** sm_v2_6 + event-first touch model (`starter/models/event_first_v1.json`):
+touch candidates → NumPy HGB touch-team classifier → two-state Viterbi →
+overwrite visible frames only where the decode disagrees with v2.6 and
+|logit| ≥ 1.0. Trained on the fit set + 16 SkillCorner training matches.
+Pareto vs sm_v2_6: Track A 342→339 spells / mean 8.65→8.73 s / s25 8→7;
+Metrica 0.6474→0.6654; Sportec 0.6187→0.6218 (all four matches); SkillCorner
+0.4365→0.4381. Hidden accuracy no worse at 4 dp (Sportec net −2 frames).
+Rollback `--no-event-first`. See [push-090-natural](algorithms/push-090-natural.md).
+
+**sm_v2_6:** sm_v2_3 + live-team error corrector retrained on the **fit set
+only** (`error_corrector_v2.json`, margin **2.5** chosen by fit LOMO). Track A
+identical to v2.3; Metrica 0.6443→0.6474; Sportec 0.6161→0.6187.
+
+**sm_v2_5 (demoted, leaky):** sm_v2_3 + `error_corrector_v1` at **margin 3.0**.
+The leakage check found the corrector was trained on Track B/C matches, so its
+gains are not honest. Kept only as a rollback. Pareto vs
+sm_v2_3: Track A spells 342→341 / mean 8.65→8.68 s / s25 tied; Metrica spellF1
+0.6443→0.6509 (hidden ≥); Sportec spellF1 0.6161→0.6191 (hidden ≥). Crossfit
+natural spellF1 0.7205→0.7220. Rollback `--no-error-corrector`. See
+[push-090-natural](algorithms/push-090-natural.md).
 
 **sm_v2_3:** equal-logit ownership ensemble with a learned turnover-boundary
 head. Five excluded-fit-match suite spellF1 .580146 -> .599177 and hidden
@@ -13,10 +34,9 @@ scores regress slightly; these tradeoffs are recorded explicitly. Challenge
 <25f spells decrease 13 -> 8, with zero <12f. Rollback `--no-boundary-model`.
 See [evidence and reproduction](algorithms/boundary-ownership-research.md).
 
-**sm_v2_4 (demoted):** sm_v2_3 + live-team error corrector. Crossfit natural
-and Metrica/Sportec B/C improved vs v2.3, but Track A structure worsened
-(spells 342→353, mean 8.65→8.38 s, s25 8→10). Opt-in via
-`--error-corrector-file`. See [push-090-natural](algorithms/push-090-natural.md).
+**sm_v2_4 (demoted):** same corrector at margin **1.5**. Crossfit/B/C improved
+vs v2.3, but Track A worsened (spells 353, mean 8.38, s25 10). Kept as research
+(`V24_CORRECTOR_MARGIN`). See [push-090-natural](algorithms/push-090-natural.md).
 
 **sm_v2_2:** baseline-aware player-set ownership with raw visible estimates and
 temporal decoding during missing-ball stretches. The five excluded-fit-match
@@ -83,14 +103,37 @@ Same three columns as Track A: **cand vs LATEST vs smooth50**.
 
 **Gate:** beat **ref** on spellF1 and hidden across the suite matches. Report Game-1-style in-sample scores separately if ever included.
 
+## Track D — SkillCorner H/A hold-out (`--skillcorner`)
+
+**Question:** does the model transfer to broadcast tracking from a third provider?
+
+- Matches: SkillCorner **SC_1953632 / SC_2006229 / SC_2007448 / SC_2013725**
+  (lowest four by sha256 of the match id; split stored in
+  `starter/external/skillcorner_split.json`). The other 16 SkillCorner matches
+  may be used for training; Track D never is.
+- Labels: H/A from SkillCorner `possession.group`, resampled 10→25 fps. Frames
+  without a group (~45%) are ignored, so only H/A frames are scored.
+- Protocol, metrics and gate: same as Track C (no worse on spellF1 and hidden).
+- Data: `python starter/external/fetch_skillcorner.py` (pinned commit, sha256
+  manifest) → `data_external/skillcorner/`.
+
+## Leakage check (always runs)
+
+`assess.py` reads the `training_matches` metadata of every model the candidate
+and ref load (`starter/external/leakage_guard.py`) and fails if any training
+match is in Track B, C or D. The only allowed overlap is legacy Metrica
+`Sample_Game_1` for models up to v2.5, which is flagged **IN-SAMPLE** in the
+output. `--allow-leakage` overrides the failure for research runs only; never
+promote a model that needs it.
+
 ## One command
 
 ```bash
 source .venv/bin/activate
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --fetch-sportec
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --public-log   # optional log only
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --ref evaluation/results/sm_v2_6_compliant.csv --skillcorner
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --skip-sportec
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --fetch-sportec --skillcorner
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --public-log   # optional log only
 ```
 
 After a new prediction:
@@ -108,10 +151,12 @@ Auto predict writes the **next version after LATEST** (prefer bare `sm_v*.csv`; 
 2. Track A vs ref + smooth50  
 3. Track B if the change touches who has the ball / missing frames  
 4. Track C (Sportec) for ownership / dead-ball model changes on the v2.x line  
-5. Log model version in [../team/RESULTS.md](../team/RESULTS.md); update `LATEST` only on promote  
+5. Track D (SkillCorner) when a model trains on SkillCorner or changes team ownership  
+6. Leakage check passes without `--allow-leakage`  
+7. Log model version in [../team/RESULTS.md](../team/RESULTS.md); update `LATEST` only on promote  
 
-`sm_v2_3` (boundary ensemble, **LATEST**): [algorithms/boundary-ownership-research.md](algorithms/boundary-ownership-research.md).  
-`sm_v2_4` (error corrector, demoted): [algorithms/push-090-natural.md](algorithms/push-090-natural.md).  
+`sm_v2_7` (event-first, **LATEST**) / `sm_v2_6` / `sm_v2_5` (demoted) / `sm_v2_4` (demoted): [algorithms/push-090-natural.md](algorithms/push-090-natural.md).  
+`sm_v2_3` (boundary ensemble): [algorithms/boundary-ownership-research.md](algorithms/boundary-ownership-research.md).  
 `sm_v2_2` / `sm_v1_10` / `sm_v1_8` notes: [algorithms/](algorithms/).  
 Research archive (experiments not needed to regenerate CSV): [../research/](../research/).  
 T27 closed: [algorithms/controlled-possession.md](algorithms/controlled-possession.md).

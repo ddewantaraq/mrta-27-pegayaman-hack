@@ -21,4 +21,4 @@ Far from T27 (no pass/travel/control proxies).
 | A | spells 406→359, mean 12.11→13.76, s12 4→3, s25 11→9, D 35660→35057 |
 | B | mean spellF1 0.429→0.491, hidden ~flat; both Metrica games beat LATEST |
 
-**Promoted (2026-11-12):** `sm_v1_8_compliant.csv` (then superseded by sm_v1_9…**sm_v2_3**; D-bridge remains in the stack). Rollback of the bridge alone: `--no-dead-bridge`. Current LATEST: `sm_v2_3_compliant.csv`.
+**Promoted (2026-11-12):** `sm_v1_8_compliant.csv` (then superseded by sm_v1_9…**sm_v2_7**; D-bridge remains in the stack). Rollback of the bridge alone: `--no-dead-bridge`. Current LATEST: `sm_v2_7_compliant.csv`.

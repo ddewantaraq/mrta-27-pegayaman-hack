@@ -1,7 +1,7 @@
 # Research logs
 
 Archived write-ups from the Nov 2026 external-data rounds. Not required to
-regenerate `sm_v2_3_compliant.csv`.
+regenerate `sm_v2_7_compliant.csv`.
 
 | Note | Topic |
 |------|--------|
