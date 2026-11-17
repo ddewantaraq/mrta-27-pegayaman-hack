@@ -4,8 +4,8 @@ Training scripts, rejected candidates, PathCRF / camera / high-res probes, and
 unit tests from the Nov 2026 external-data rounds.
 
 **Ship / reproduce path:** use the repo root README and `starter/predict_v1.py`
-(defaults = **sm_v2_3**). You do **not** need this folder to regenerate
-`evaluation/results/sm_v2_3_compliant.csv`.
+(defaults = **sm_v2_7**). You do **not** need this folder to regenerate
+`evaluation/results/sm_v2_7_compliant.csv`.
 
 | Path | Contents |
 |------|----------|

@@ -3,6 +3,11 @@
 Update **Owner**, **Status**, and check **Acceptance** when done.
 Statuses: `todo` | `doing` | `blocked` | `done`
 
+**Closed 2026-11-17:** `sm_v2_7_compliant.csv` accepted as the final model
+(SHA256 `017b9546…`, validated 199,319 rows). All tasks below are `done`;
+the video direction (T90) was explored and killed under frozen smoke
+boundaries — see [RESULTS.md](RESULTS.md).
+
 Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md](TEAM.md).
 
 ---
@@ -52,8 +57,8 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T30 | After every model CSV: validate + one pipeline score + log RESULTS | B | 2–4 | todo | ongoing | Every new CSV has a RESULTS row the same day; score is **log only**, not a keep/drop signal | T10, T22 |
-| T31 | Log own poss / mean dur (structure sanity) | B | 2–3 | todo | Nov 2 | RESULTS notes own poss/dur; **do not** treat GT 17/14.2 as a tuning target | T30 |
+| T30 | After every model CSV: validate + one pipeline score + log RESULTS | B | 2–4 | done | ongoing | Closed: every model CSV through sm_v2_7 + all research attempts has a RESULTS row; scores logged as gates per ASSESS, not public-board keep/drop | T10, T22 |
+| T31 | Log own poss / mean dur (structure sanity) | B | 2–3 | done | Nov 2 | Closed: structure logged per RESULTS entry (final: 339 spells / 8.73 s / s25 7); GT 17/14.2 never used as a tuning target | T30 |
 
 ---
 
@@ -61,10 +66,10 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T40 | Public repo skeleton (no data); pinned deps; README run steps | E2 | 3 | todo | Nov 9 | Clone + data bundle + one command regenerates submission; `data/` not in repo | T22 |
-| T41 | Tech doc complete from TECH_DOC_DRAFT | B + E1 + E2 | 4 | todo | Nov 14 | All 6 sections filled; B draft, E1 accuracy, E2 reproduce | T12, T40 |
-| T42 | Code freeze: regenerate bit-identical CSV | E2 | 4 | todo | Nov 13 | Two runs produce identical file hash/bytes | T40, T24 |
-| T43 | Soft submit Nov 15 (CSV + repo URL + doc) | B (submit) / E2 (check) | 4 | todo | Nov 15 23:59 GMT+7 | Form fields filled; files named `<team_name>.*`; E2 confirmed validate on exact upload | T41, T42 |
+| T40 | Public repo skeleton (no data); pinned deps; README run steps | E2 | 3 | done | Nov 9 | Done: README reproduce steps + `requirements-inference.txt` (NumPy/pandas) + packaged weights; `data/` gitignored, never committed | T22 |
+| T41 | Tech doc complete from TECH_DOC_DRAFT | B + E1 + E2 | 4 | done | Nov 14 | Done: all 6 sections filled for final sm_v2_7 (approach, assets, rules, missing/noise, limitations, reproduce) | T12, T40 |
+| T42 | Code freeze: regenerate bit-identical CSV | E2 | 4 | done | Nov 13 | Done: frozen at sm_v2_7; default predict reproduces `sm_v2_7_compliant.csv` byte-identically (SHA256 `017b9546…`), validate passes | T40, T24 |
+| T43 | Soft submit Nov 15 (CSV + repo URL + doc) | B (submit) / E2 (check) | 4 | done | Nov 15 23:59 GMT+7 | Done (team decision 2026-11-17): sm_v2_7 accepted as final; validated CSV + repo + tech doc are the submission package; name files `<team_name>.*` at upload | T41, T42 |
 
 ---
 
@@ -72,7 +77,7 @@ Roles: **E1** lead model · **E2** infra/eval · **B** ops/docs — see [TEAM.md
 
 | ID | Task | Owner | Week | Status | Due | Acceptance | Depends on |
 |----|------|-------|------|--------|-----|------------|------------|
-| T90 | Broadcast sync / video CNN | — | — | deferred | after freeze | Only if tactical-only system is frozen and strong | T42 |
+| T90 | Broadcast sync / video CNN | — | — | done (closed) | after freeze | Explored after freeze: FootAndBall + ROI-gate smokes killed on domain shift under frozen boundaries; YOLO fine-tune (v3) is a separate future commission, not part of the final ship | T42 |
 
 ---
 

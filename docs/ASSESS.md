@@ -130,11 +130,10 @@ promote a model that needs it.
 
 ```bash
 source .venv/bin/activate
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --ref evaluation/results/sm_v2_2_compliant.csv
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --skip-sportec
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --fetch-sportec
-bash assess.sh evaluation/results/sm_v2_3_compliant.csv --public-log   # optional log only
-bash assess.sh evaluation/results/sm_v2_7_compliant.csv --skillcorner  # adds Track D
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --ref evaluation/results/sm_v2_6_compliant.csv --skillcorner
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --skip-sportec
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --fetch-sportec --skillcorner
+bash assess.sh evaluation/results/sm_v2_7_compliant.csv --public-log   # optional log only
 ```
 
 After a new prediction:

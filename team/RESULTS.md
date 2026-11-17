@@ -1,5 +1,242 @@
 # Results log
 
+### 2026-11-17: smoke v2 (ISSIA-selected detector + ROI gate) — STOP
+
+Boundaries v2 frozen first: detector selection on ISSIA only,
+5m ROI gate pre-registered, identical segment/kill. SoccerNet-
+fine-tuned YOLO (Roboflow sports, sha `678fbad0…`) evaluated on
+ISSIA cams 5+6: detection 0.63/0.80, cam-5 far-FP rate 34% (p90
+1223px) vs FootAndBall 0.83/0.97 with 100% ≤10px — FootAndBall
+wins the external selection. Smoke v2 (FootAndBall + gate):
+ungated present 15.25%, **gated compared = 0** — no detection
+falls within 5m of the ATD ball in 2000 frames. Firings are
+systematically elsewhere, not near-misses; gating cannot rescue.
+STOP per boundaries; no detector shopping on BAR-ATH output.
+Artifacts: `evaluation/reports/issia_yolo.json`,
+`barath_smoke_v2.json`, `research/experiments/issia_yolo_eval.py`,
+`barath_smoke_v2.py`, `docs/algorithms/video-smoke-v2-boundaries.md`.
+
+### 2026-11-17: BAR-ATH video smoke — STOP (detector domain shift)
+
+Tactical mp4 placed by team (renamed `-002` → expected name; 5.22GB,
+199,319 frames verified by code). Frozen smoke re-run unchanged:
+detector present 15.25% (ATD 92.25%), compared 302 frames, median
+disagreement **39.6 m**, p90 74.3 m, 100% > 1.5 m → pre-registered
+kill (> 2 m) triggers, direction STOPPED. Diagnostics (aggregates
+only): seek lands exactly on frame 11185, preprocessing/labels match
+the FootAndBall repo, pixel-space distance median ~905 px — the
+detector fires far from the ATD ball on this camera (domain shift:
+moving tactical feed vs static ISSIA). No threshold/segment tuning
+was done after seeing output, per frozen boundaries. Detector
+weights remain external-only assets; v2.7 unchanged and final.
+
+### 2026-11-17: BAR-ATH video smoke — inconclusive (no tactical mp4 in bundle)
+
+Boundaries frozen before the run
+([video-smoke-boundaries](../docs/algorithms/video-smoke-boundaries.md)):
+FootAndBall thresholds 0.7, segment 11185–13184, kill = median
+disagreement > 2m, aggregates only, no calibration on BAR-ATH.
+The code-only smoke (`research/experiments/barath_smoke.py`) read
+the ATD stream fine (ball present 92.3% in segment) but the tactical
+mp4 is absent from this bundle (setup note T02: mp4 optional,
+skipped), so zero frames decoded — verdict INCONCLUSIVE, not PASS.
+Unblocking is a team action: place the enrolment tactical mp4 in the
+data bundle, then re-run the identical frozen script. No `data/`
+file was listed or inspected by the agent; only aggregate counts
+were emitted.
+
+### 2026-11-17: new direction a-ext — FootAndBall falsification passes on ISSIA
+
+Downloaded FootAndBall weights (sha256 `42fbc1f4…`, 199,649 params,
+MIT) + ISSIA-CNR (Sequences 292MB + Annotations, Dropbox links from
+the dataset page) into gitignored `data_external/`. Pretrained
+detector at native 1080p, threshold 0.7, held-out cameras 5+6:
+241 GT ball frames, detection rate 0.83 / 0.97, median pixel error
+2.1 / 2.5 px, p90 < 5 px, 100% within 10 px (~0.06–0.15 m at the
+tactical Jacobian). Caveats: ISSIA is the detector's home domain
+(paper protocol trains cams 1–4), small sample, static cameras vs
+BAR-ATH moving tactical feed. Next step is the BAR-ATH smoke
+(detector-vs-ATD agreement, non-tuning), which needs the tactical
+video as pipeline input — still banned for research reads here, so
+it waits on a team decision. Artifacts:
+`evaluation/reports/issia_falsification.json`,
+`research/experiments/issia_falsification.py`.
+
+### 2026-11-17: new direction a-sim/b — trajectory refinement passes RMSE, weak nearest
+
+GT-arbitrated simulation (FIT-4): degrade GT ball to ATD proxy (41%
+block dropout + contested jitter σ∈{0.15,0.3,0.6}), refine = ≤25f gap
+fill + Savitzky-Golay(7,2). Contested-window RMSE improves
+25–29% across the sweep (kill threshold 20% — pass). But nearest-team
+agreement at contested windows moves only 0.5484 → 0.5505 (+0.002):
+xy error is not the binding constraint at <1m duels. This tests
+trajectory refinement, not a video detector (which could recover true
+positions where interp cannot). Next step requires FootAndBall +
+ISSIA downloads and a team decision on BAR-ATH video-as-input (still
+banned for research reads here). Artifacts:
+`evaluation/reports/ball_refine_sim.json`, `ball_refine_nearest.json`,
+`research/experiments/ball_refine_sim.py`, `ball_refine_nearest.py`.
+
+### 2026-11-17: touch seed ensemble — held (identical decode)
+
+Averaging touch HGB logits over 5 seeds (29/73/101/202/307) reproduces
+the single-seed decode exactly on FIT LOMO (0.7702, same per-match
+bests). No variance to reduce at the margin threshold. Held. Artifact:
+`evaluation/reports/touch_seed_ensemble_crossfit.json`,
+`research/experiments/touch_seed_ensemble_experiment.py`.
+
+### 2026-11-17: duel-conditional margin decode — held (below noise)
+
+Decoder-only: overwrite margin 0.5 at duel touches (|min_dist_home −
+min_dist_away| ≤ 1m), 1.0 elsewhere, shipped touch weights unchanged.
+FIT LOMO 0.7727 vs 0.7702 (+0.0025, worst +0.0059); clean external
+eval (G2 + Sportec suite + SC hold-out, shipped model): mean spell
+0.6028 vs 0.6017 (+0.0011), hidden identical, WR9 −0.0043. Positive
+trend on two protocols but an order below the ~0.04 spell noise floor
+— insufficient evidence to promote or to change starter decode.
+Artifacts: `evaluation/reports/touch_duel_margin_crossfit.json`,
+`touch_duel_margin_eval.json`,
+`research/experiments/touch_duel_margin_experiment.py`,
+`touch_duel_margin_eval.py`.
+
+### 2026-11-17: final lever contested-weighted touch head — held (tie)
+
+Touch HGB with extra sample weight on touches within 25f of a GT
+switch (boundary head had this, touch head never did): weight 2 →
+0.7690, weight 4 → 0.7704 vs unweighted 0.7702 FIT LOMO, hidden
+−0.0001 — a tie inside the ~0.04 spell noise floor, not a beat.
+SoccerTrack (Rank 7) skipped by team decision (retrieval steps);
+PFF (Rank 4) skipped earlier. All ranked levers are now dispositioned
+and none beats sm_v2_7. `LATEST` stays `sm_v2_7_compliant.csv`.
+Artifact: `evaluation/reports/touch_contested_weight_crossfit.json`,
+`research/experiments/touch_contested_weight_experiment.py`.
+
+### 2026-11-17: mad-scientist Ranks 5–8 — held / blocked (v2.7 unbeaten)
+
+Rank 5 GNN probe (2-round distance-weighted message passing, 5Hz,
+contested visible frames, FIT LOMO): GNN 0.659 beats pooled control
+0.642 but not v2.3 logit 0.772 — kill gate, no NumPy export. Rank 6
+synthetic duel snippets (control-outcome labels, physics simulator):
+mixed touch training 0.7687 vs real-only 0.7702 — held. Rank 7
+SoccerTrack v2: schema verified via search (`ball/` per-frame track
+exists, BAS team/actor), but dataset is HF-gated (agreement required)
+and HF is proxy-denied in this environment — blocked on access, not
+merit; needs a manual download into `data_external/` to proceed.
+Rank 8 SSL probe (masked-ball forecasting pretrain + frozen linear
+probe): 0.502 vs v2.3 0.772 — chance, kill gate at probe. Rank 5
+strengthened retest (GNN residual on v2.3 logit + nearest features,
+60 epochs): 0.7659 vs v2.3 0.7720, pooled control 0.7644 — message
+passing adds ~0.001 over pooled residual, still below v2.3 alone.
+Rank 5 closed definitively (`gnn_probe_v23res.json`). `LATEST`
+stays `sm_v2_7_compliant.csv`. Artifacts:
+`evaluation/reports/gnn_probe.json`, `touch_synthetic_crossfit.json`,
+`ssl_probe.json`, `research/experiments/gnn_probe.py`,
+`synthetic_duels.py`, `touch_synthetic_experiment.py`, `ssl_probe.py`.
+
+### 2026-11-17: mad-scientist Ranks 1–3 — held (PFF skipped by team decision)
+
+PFF WC2022 (Rank 4) skipped: gated access needs organiser approval.
+Rank 1 physics intercept features (Spearman race, 8 cols from 5Hz
+nodes) into touch HGB: FIT LOMO 0.7700 vs shipped-protocol baseline
+0.7702. Rank 2 dwell-outcome label (25f majority): 0.7649. Combined:
+FIT-only 0.7728 but under ship selection with SkillCorner folds 0.7509
+vs shipped 0.7530 (SC spell +0.0004, hidden −0.0002) — FIT-only gain
+does not survive the ship gate. Rank 3 duel-winner probe (Sportec
+TacklingGame windows, 586 duels): duel head 0.576 vs touch logit 0.579
+— kill gate at probe, no downstream wiring. All held; `LATEST` stays
+`sm_v2_7_compliant.csv`. Artifacts:
+`evaluation/reports/touch_physics_*_crossfit.json`,
+`duel_winner_probe.json`, `research/experiments/touch_physics_experiment.py`,
+`duel_winner_probe.py`, `research/tests/test_touch_physics.py`.
+Queued (public, unverified): Rank 5 GNN-distill, Rank 6 synthetic
+duels, Rank 7 SoccerTrack folds, Rank 8 SSL probe.
+
+### 2026-11-17: P4 missing-span audit — held (no drift on clean GT)
+
+Probe: are hidden-span team errors onset handoff or mid-span drift?
+v2.7 labeller, 5s-block dropout spans + natural Metrica spans. On Sportec,
+hidden-team accuracy does not decay with distance into the span (d0–4 →
+d25+: 0.75→0.82 WMX, 0.76→0.84 WPY, 0.80→0.86 WQQ, 0.80→0.85 WR9) —
+the Viterbi settles, it does not drift. Only Sample_Game_3 natural spans
+(87 spans, noisy event GT) decay (0.78→0.70→0.55). Mid-span possessor
+heads / imputation have no headroom on clean GT; span errors are onset
+handoff + in-the-dark turnovers. Not pursued. Artifacts:
+`evaluation/reports/missing_span_audit.json`,
+`research/experiments/missing_span_audit.py`.
+
+### 2026-11-17: P5 dead-ball hedge — held (no headroom)
+
+Scored v2.7 D against frame-exact BallStatus on Sportec
+(`diagnose_v27_baseline.json`): dead precision/recall ≈ 0.996 on all
+four Track C matches (~200–260 D errors vs ~5–6k wrong-team per match).
+Metrica D errors concentrate where the event-derived GT itself is noisy
+(visible dead recall 0.09–0.12). A dead-alive head has nothing to fix on
+clean GT and cannot fix GT noise. Not pursued. P3 (contested boundary
+head) stays held on the pre-existing ladder (best rung 0.7208 < 0.723);
+P7 (broadcast/video) stays team-deferred.
+
+### 2026-11-17: P6 SkillCorner phase dead-ball proxy — held
+
+Probe: do `phases_of_play` gaps mark dead ball on SC_1874553 (train)?
+P(gap|phase) = 0.04, P(gap|no phase) = 0.95 — phases mirror group
+coverage almost exactly, so they add no information beyond
+`possession.group`. Phase gaps mix dead frames with live loose-ball
+frames (challenge GT keeps last team there, never D), so they are not a
+dead-ball label. Not pursued as supervision. Artifact:
+`evaluation/reports/sc_phase_proxy.json`,
+`research/experiments/sc_phase_proxy.py`.
+
+### 2026-11-17: event-team labeled touch head — held
+
+P1 follow-up: train the event-first touch classifier on Sportec play-event
+team labels (GT lead+3 backoff beyond 12f) instead of pure GT lead+3, rule
+candidates, LOMO over the three Sportec FIT matches. 206/8675 touch labels
+differ (2.4%). Event labels lose on every decoder config (c0.0_m1.0:
+0.7779 → 0.7701, worst +0.0059 → +0.0043); the disagreeing frames are
+annotation noise, not signal. Neither variant clears the hidden gate on
+the 3-match subset. `LATEST` stays `sm_v2_7_compliant.csv`. Artifact:
+`evaluation/reports/touch_eventlabel_crossfit.json`,
+`research/experiments/touch_eventlabel_experiment.py`.
+
+### 2026-11-17: P2 premise check — full CRF decode was already tested, pivot
+
+Deep-research P2 proposed "full dynamic CRF path decoding (untested)" for
+missing-ball spans. Repo history shows it was tested:
+`research/experiments/pathcrf_sequence_experiment.py` runs official
+`net.crf.decode` per geometry window, free and possession-zone-hinted
+variants, on Metrica 2 — ball-free suite spellF1 0.3917 (ref 0.4264),
+natural 0.4103 (ref 0.6298); hinted suite 0.4526 but natural 0.5012 /
+hidden 0.5189, losing to the residual hybrid. Rejected as a replacement
+(see [temporal ownership](../docs/algorithms/temporal-ownership-research.md)
+§ PathCRF). The only untested slice is missing-spans-only application of
+CRF votes, but no vote cache survives (`prediction_cache` has none) so it
+needs full torch re-inference against strongly negative priors — skipped
+as low expected value. Pivoting to the P1 follow-up (event-team labeled
+touch head) and P6 (SkillCorner dead-ball proxy).
+
+### 2026-11-17: union touch candidates (rule + ELASTIC-style accel) — held
+
+P1 from the deep-research review: parse the previously unused Sportec
+`events_raw` XML (touch time → frame N via the ball clock) and SkillCorner
+`dynamic_events.csv` (player_possession + on_ball_engagement; duel
+`team_id` is the pressing side, possessor team resolved via `match.json`)
+into touch supervision. Event-team labels agree with GT lead+3 at 0.93
+(Sportec play), 0.83 (SkillCorner), 0.65–0.68 (Sportec duels).
+
+An acceleration-based kick/receive detector (accel ≥ 10 m/s² or slowdown ≥
+3 m/s near a player; physics constants, untuned) lifts event recall @tol12
+from 0.56 → 0.69 (J03WOH fit), 0.71 → 0.80 (J03WMX readout) and 0.37 →
+0.79 (SC train). But a retrained event-first head on union candidates loses
+FIT LOMO natural spellF1 0.7702 → 0.7635 (hidden 0.5617 → 0.5612), and a
+dual-margin sweep (accel-only margin 1–4) peaks at 1.0. Denser Viterbi
+nodes reshape the decode; recall does not convert. No B/C/D track was
+touched for selection. `LATEST` stays `sm_v2_7_compliant.csv`. Artifacts:
+`evaluation/reports/touch_supervision_align.json`,
+`touch_union_crossfit.json`, `touch_union_margin.json`,
+`research/experiments/touch_supervision.py`, `touch_align.py`,
+`touch_union_experiment.py`, `research/tests/test_touch_supervision.py`.
+Method: [touch supervision](../docs/algorithms/touch-supervision.md).
+
 ### 2026-11-16: sm_v2_7 event-first touch model (+ SkillCorner) — promoted
 
 sm_v2_6 plus a touch-team model: ball touch candidates, a HGB touch classifier
@@ -468,10 +705,12 @@ Short bullets only — why a change was kept or dropped. **Keep? must cite chall
 | 2026-11-12 | **sm_v1_8** T32 short D-sandwich bridge (≤25f, same H/A) | yes (then superseded) | Tracking flicker ≠ stoppage. Track A + B beat sm_v1_7. Still in stack under later models. Rollback `--no-dead-bridge`. [../docs/algorithms/dead-bridge.md](../docs/algorithms/dead-bridge.md). |
 | 2026-11-14 | **sm_v1_10** calibrated boosted live/dead | yes (then sm_v2_2) | External Sportec+Metrica fit. [../docs/algorithms/boosted-dead-ball.md](../docs/algorithms/boosted-dead-ball.md). |
 | 2026-11-14 | **sm_v2_2** residual ownership | yes (then sm_v2_3) | [../docs/algorithms/temporal-ownership-research.md](../docs/algorithms/temporal-ownership-research.md). |
-| 2026-11-14 | **sm_v2_3** boundary ownership ensemble | **yes (default / LATEST)** | Beats v2.2 on Metrica A+B. Rollback `--no-boundary-model`. [../docs/algorithms/boundary-ownership-research.md](../docs/algorithms/boundary-ownership-research.md). |
+| 2026-11-14 | **sm_v2_3** boundary ownership ensemble | yes (then sm_v2_6/7) | Beats v2.2 on Metrica A+B. Still in stack. Rollback `--no-boundary-model`. [../docs/algorithms/boundary-ownership-research.md](../docs/algorithms/boundary-ownership-research.md). |
 | 2026-11-16 | sm_v2_4 live-team error corrector | **no (demoted)** | Crossfit/B/C up vs v2.3 but Track A s25 8→10 / mean down; restore v2.3. Opt-in `--error-corrector-file`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
 | 2026-11-16 | sm_v2_5 player-node corrector | **no (held)** | Crossfit spell 0.722 < then-v2.4 0.729; vis acc down; worst Δ −0.025. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
 | 2026-11-16 | sm_v2_5 sparse switch editor | **no (held)** | Crossfit spell 0.669 < v2.3 0.721; worst Δ −0.116. Keep v2.3. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
 | 2026-11-16 | insert-only contested switches | **no (held)** | Crossfit spell 0.719 < v2.3 0.721; safer inserts still flat. Keep v2.3. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
-| 2026-11-16 | **sm_v2_5** structure-preserving corrector (margin 3.0) | **yes (default / LATEST)** | Pareto vs v2.3: Track A mean↑/spells↓, B/C spell↑, hidden ≥. Rollback `--no-error-corrector`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
-| 2026-11-16 | boundary transition retrain ladder | **no (held)** | Best rung_b 0.7208 < v2.5 0.723; hidden regresses. Keep v2.5. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | **sm_v2_5** structure-preserving corrector (margin 3.0) | **no (demoted, leaky)** | Pareto vs v2.3 but corrector trained on eval matches. Replaced by sm_v2_6. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | boundary transition retrain ladder | **no (held)** | Best rung_b 0.7208 < v2.5 0.723; hidden regresses. Keep then-v2.5. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | **sm_v2_6** honest fit-only corrector (margin 2.5) | yes (then sm_v2_7) | Retrain on fit set only; Pareto vs v2.3 on A/B/C. Rollback `--no-error-corrector`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |
+| 2026-11-16 | **sm_v2_7** event-first touch model (+ SkillCorner) | **yes (default / LATEST)** | Pareto vs v2.6 on A/B/C/D. Rollback `--no-event-first`. [../docs/algorithms/push-090-natural.md](../docs/algorithms/push-090-natural.md). |

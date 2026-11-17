@@ -101,9 +101,9 @@ _Owner: B (structure) · E1 (method)_
 
 What we built, and why that rather than something else.
 
-- Pipeline overview (tactical ATD → features → state machine → CSV): … _(Week 2+)_
+- Pipeline overview (tactical ATD → features → state machine → CSV): tactical ATD → `features.py` (ball + nearest/cluster geometry) → boosted live/dead → residual ownership → boundary ensemble → fit-only error corrector → event-first touch model → `predict_v1.py` writes the 199,319-row CSV; NumPy-only inference from packaged weights.
 - Why optimize for possession spells (spellF1), not frame accuracy: see section 0.
-- What we deliberately did **not** build (e.g. broadcast sync, video CNN): … _(Week 2+)_
+- What we deliberately did **not** build (e.g. broadcast sync, video CNN): broadcast sync (separate unsynchronised timeline) and a shipped video detector — FootAndBall/ROI-gate smokes were run as research under frozen boundaries and killed on domain shift (median disagreement 39.6 m); homography is loaded for debugging only, never an inference input. Final ship is tracking-only `sm_v2_7`.
 
 ---
 

@@ -1,9 +1,9 @@
 # Temporal ownership experiments
 
-Status: residual hybrid `sm_v2_2` is promoted; earlier candidates remain research only.
-The current approved successor is **`sm_v2_3`**; see
-[boundary ownership research](boundary-ownership-research.md).
-(`sm_v2_4` error corrector was demoted; see [push-090-natural](push-090-natural.md).)
+Status: residual hybrid `sm_v2_2` is promoted on this rung; earlier candidates remain research only.
+Later ship line: **`sm_v2_3`** → **`sm_v2_7`** (`LATEST`); see
+[boundary ownership research](boundary-ownership-research.md) and
+[push-090-natural](push-090-natural.md).
 No public challenge possession labels are used for training or selection.
 
 ## Design and evidence
