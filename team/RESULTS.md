@@ -1,5 +1,11 @@
 # Results log
 
+### 2026-11-17: YOLO fine-tune v3 — cancelled by team decision
+
+Scoped and boundaries frozen, but cancelled by team decision before
+any result. No weights were produced or evaluated; nothing ships
+from this line. `sm_v2_7_compliant.csv` remains the final submission.
+
 ### 2026-11-17: smoke v2 (ISSIA-selected detector + ROI gate) — STOP
 
 Boundaries v2 frozen first: detector selection on ISSIA only,
